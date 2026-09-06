@@ -25,8 +25,16 @@
 import { PNG } from 'pngjs';
 
 export const DEFAULT_OPTIONS = {
+  /**
+   * How to read the sheet: `auto` for packed 96px-grid sheets (props that touch,
+   * texture blocks), `objects` for objects spaced out on a transparent
+   * background (cut on the gaps only), `grid` for a tileset (every cell is a tile).
+   */
+  mode: 'auto',
   /** Alpha at or above this counts as opaque. */
   alphaMin: 16,
+  /** objects mode: clusters closer than 2*gap pixels are one object. */
+  gap: 1,
   /** Grid the sheet's props are packed on. */
   layout: 96,
   /** Tile grid used when cutting full-bleed texture blocks. */
@@ -56,6 +64,104 @@ function buildMask(png, alphaMin) {
   const mask = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i += 1) mask[i] = data[i * 4 + 3] >= alphaMin ? 1 : 0;
   return mask;
+}
+
+/** Box dilation by r pixels (separable sliding window). */
+function dilate(mask, W, H, r) {
+  if (r <= 0) return mask;
+  const tmp = new Uint8Array(W * H);
+  for (let y = 0; y < H; y += 1) {
+    const row = y * W;
+    let count = 0;
+    for (let x = -r; x < W; x += 1) {
+      const add = x + r;
+      if (add < W && mask[row + add]) count += 1;
+      const rem = x - r - 1;
+      if (rem >= 0 && mask[row + rem]) count -= 1;
+      if (x >= 0) tmp[row + x] = count > 0 ? 1 : 0;
+    }
+  }
+  const out = new Uint8Array(W * H);
+  for (let x = 0; x < W; x += 1) {
+    let count = 0;
+    for (let y = -r; y < H; y += 1) {
+      const add = y + r;
+      if (add < H && tmp[add * W + x]) count += 1;
+      const rem = y - r - 1;
+      if (rem >= 0 && tmp[rem * W + x]) count -= 1;
+      if (y >= 0) out[y * W + x] = count > 0 ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+/**
+ * Objects spaced out on a transparent background: every cluster of opaque
+ * pixels (joined across gaps of up to 2*gap pixels) is one piece; boxes that
+ * overlap each other substantially are merged.
+ */
+function objectPieces(mask, W, H, opts) {
+  const grown = dilate(mask, W, H, opts.gap ?? 1);
+  const labels = new Int32Array(W * H);
+  const stack = new Int32Array(W * H);
+  const boxes = [];
+  for (let i = 0; i < W * H; i += 1) {
+    if (!grown[i] || labels[i]) continue;
+    const id = boxes.length + 1;
+    const box = { x0: W, y0: H, x1: -1, y1: -1 };
+    boxes.push(box);
+    let sp = 0;
+    stack[sp++] = i;
+    labels[i] = id;
+    while (sp) {
+      const p = stack[--sp];
+      const x = p % W;
+      const y = (p - x) / W;
+      if (mask[p]) {
+        if (x < box.x0) box.x0 = x;
+        if (x > box.x1) box.x1 = x;
+        if (y < box.y0) box.y0 = y;
+        if (y > box.y1) box.y1 = y;
+      }
+      const tryPush = (q) => {
+        if (grown[q] && !labels[q]) {
+          labels[q] = id;
+          stack[sp++] = q;
+        }
+      };
+      if (x > 0) tryPush(p - 1);
+      if (x < W - 1) tryPush(p + 1);
+      if (y > 0) tryPush(p - W);
+      if (y < H - 1) tryPush(p + W);
+    }
+  }
+  let rects = boxes.filter((b) => b.x1 >= 0).map((b) => ({ x: b.x0, y: b.y0, w: b.x1 - b.x0 + 1, h: b.y1 - b.y0 + 1 }));
+  // merge boxes that overlap by more than a corner (a detached part sitting over its object)
+  let changed = true;
+  while (changed) {
+    changed = false;
+    outer: for (let i = 0; i < rects.length; i += 1) {
+      for (let j = i + 1; j < rects.length; j += 1) {
+        const a = rects[i];
+        const b = rects[j];
+        const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+        const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+        const inter = ix * iy;
+        const smaller = Math.min(a.w * a.h, b.w * b.h);
+        if (inter > 0 && inter >= 0.4 * smaller) {
+          const x = Math.min(a.x, b.x);
+          const y = Math.min(a.y, b.y);
+          rects[i] = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+          rects.splice(j, 1);
+          changed = true;
+          break outer;
+        }
+      }
+    }
+  }
+  const min = opts.minSize;
+  rects = rects.filter((r) => !(r.w < min && r.h < min) && Math.min(r.w, r.h) >= 2);
+  return rects.map((r) => ({ ...r, kind: 'prop', tags: [], opaque: opaqueFraction(mask, W, r) }));
 }
 
 /** Trim transparent borders off a rect; null if fully transparent. */
@@ -566,6 +672,25 @@ export function sliceSheet(png, name = '', options = {}) {
     const pieces = fixed.pieces.filter((p) => trimRect(mask, W, p));
     return { layout: fixed.layout, pieces: dedupe(png, pieces) };
   }
+  const band = (p) => Math.floor((p.y + p.h / 2) / opts.layout);
+  const order = (a, b) => band(a) - band(b) || a.x - b.x;
+  if (opts.mode === 'grid') {
+    // a tileset: every non-empty cell is a tile, identical cells once
+    const L = opts.layout;
+    const pieces = [];
+    for (let y = 0; y < H; y += L) {
+      for (let x = 0; x < W; x += L) {
+        const cell = { x, y, w: Math.min(L, W - x), h: Math.min(L, H - y) };
+        if (trimRect(mask, W, cell)) pieces.push({ ...cell, kind: 'tile', tags: [], opaque: 1 });
+      }
+    }
+    return { layout: 'grid', pieces: dedupe(png, pieces) };
+  }
+  if (opts.mode === 'objects') {
+    const pieces = objectPieces(mask, W, H, opts);
+    pieces.sort(order);
+    return { layout: 'objects', pieces: dedupe(png, pieces) };
+  }
   const pieces = [];
   const groupMask = new Uint8Array(W * H);
   for (const group of cellGroups(png, mask, opts)) {
@@ -592,8 +717,7 @@ export function sliceSheet(png, name = '', options = {}) {
     for (let i = before; i < pieces.length; i += 1) pieces[i].cells = group.cells;
   }
   // reading order: bands of a layout cell top to bottom, then left to right
-  const band = (p) => Math.floor((p.y + p.h / 2) / opts.layout);
-  pieces.sort((a, b) => band(a) - band(b) || a.x - b.x);
+  pieces.sort(order);
   return { layout: 'auto', pieces: dedupe(png, pieces) };
 }
 

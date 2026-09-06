@@ -15,8 +15,11 @@
 //   --dry              report only, write nothing
 //   --debug <dir>      also write <dir>/<sheet>.png with the pieces outlined
 //   --no-cut           never cut full-bleed blocks into tiles
-//   --layout <px>      packing grid of the sheets (default 96)
+//   --mode <m>         auto (packed 96px sheets), objects (spaced out on transparency), grid (a tileset)
+//   --layout <px>      packing grid of the sheets, or the tile size for grid mode (default 96)
 //   --cell <px>        tile grid inside texture blocks (default 48)
+//   --min-size <px>    drop specks smaller than this (default 8)
+//   --gap <px>         objects mode: clusters closer than 2*gap pixels are one object (default 1)
 //   --prune-stale      drop pieces of an earlier cut of these sheets that no longer exist and no map uses
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,7 +32,7 @@ const ASSETS = path.join(ROOT, 'assets');
 const MANIFEST = path.join(ASSETS, 'manifest.json');
 
 const args = process.argv.slice(2);
-const opt = { pack: '', dry: false, debug: '', cut: true, layout: 96, cell: 48, pruneStale: false };
+const opt = { pack: '', dry: false, debug: '', cut: true, layout: 96, cell: 48, pruneStale: false, mode: 'auto', minSize: 8, gap: 1 };
 const inputs = [];
 for (let i = 0; i < args.length; i += 1) {
   const a = args[i];
@@ -40,6 +43,9 @@ for (let i = 0; i < args.length; i += 1) {
   else if (a === '--prune-stale') opt.pruneStale = true;
   else if (a === '--layout') opt.layout = Number(args[++i]);
   else if (a === '--cell') opt.cell = Number(args[++i]);
+  else if (a === '--mode') opt.mode = args[++i] ?? 'auto';
+  else if (a === '--min-size') opt.minSize = Number(args[++i]);
+  else if (a === '--gap') opt.gap = Number(args[++i]);
   else inputs.push(a);
 }
 if (!opt.pack || !inputs.length) {
@@ -80,7 +86,7 @@ let removed = 0;
 for (const file of files) {
   const buffer = fs.readFileSync(file);
   const name = path.basename(file);
-  const r = importSheet({ assetsDir: ASSETS, manifest, pack: opt.pack, name, buffer, options: { cutTiles: opt.cut, layout: opt.layout, cell: opt.cell }, dryRun: opt.dry, used });
+  const r = importSheet({ assetsDir: ASSETS, manifest, pack: opt.pack, name, buffer, options: { cutTiles: opt.cut, layout: opt.layout, cell: opt.cell, mode: opt.mode, minSize: opt.minSize, gap: opt.gap }, dryRun: opt.dry, used });
   created += r.created;
   existing += r.existing;
   removed += r.removed;

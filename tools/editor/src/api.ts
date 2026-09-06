@@ -71,7 +71,7 @@ export const api = {
     call<AssetEntry>(`/api/assets/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteAsset: (id: string) => call<{ ok: true }>(`/api/assets/${id}`, { method: 'DELETE' }),
   prune: (pack?: string) => call<{ moved: string[] }>('/api/assets/prune', { method: 'POST', body: JSON.stringify({ pack: pack ?? null }) }),
-  importSheet: (body: { name: string; pack: string; dataUrl: string; options?: { cutTiles?: boolean; layout?: number; cell?: number; gapTolerance?: number }; dryRun?: boolean }) =>
+  importSheet: (body: { name: string; pack: string; dataUrl: string; options?: { cutTiles?: boolean; layout?: number; cell?: number; gapTolerance?: number; mode?: 'auto' | 'objects' | 'grid' }; dryRun?: boolean }) =>
     call<SheetImportResult>('/api/assets/sheet', { method: 'POST', body: JSON.stringify(body) }),
 };
 

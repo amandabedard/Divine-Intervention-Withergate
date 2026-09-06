@@ -284,6 +284,7 @@ function SheetImportDialog({ defaultPack, onClose }: { defaultPack: string; onCl
   const [pack, setPack] = useState(defaultPack);
   const [cutTiles, setCutTiles] = useState(true);
   const [layout, setLayout] = useState(96);
+  const [mode, setMode] = useState<'auto' | 'objects' | 'grid'>('auto');
   const [result, setResult] = useState<SheetImportResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -299,7 +300,7 @@ function SheetImportDialog({ defaultPack, onClose }: { defaultPack: string; onCl
     setBusy(true);
     setError('');
     try {
-      const r = await api.importSheet({ name: file.name, pack: pack.trim(), dataUrl, options: { cutTiles, layout }, dryRun });
+      const r = await api.importSheet({ name: file.name, pack: pack.trim(), dataUrl, options: { cutTiles, layout, mode }, dryRun });
       setResult(r);
       if (!dryRun) {
         await editor.refreshIndex();
@@ -352,9 +353,17 @@ function SheetImportDialog({ defaultPack, onClose }: { defaultPack: string; onCl
             <input value={pack} onChange={(e) => setPack(e.target.value)} placeholder="town, forest…" />
           </label>
           <label className="field">
+            <span>sheet type</span>
+            <select value={mode} onChange={(e) => setMode(e.target.value as 'auto' | 'objects' | 'grid')} title="How to read the sheet">
+              <option value="auto">packed grid (props touch, texture blocks)</option>
+              <option value="objects">objects spaced out on transparency</option>
+              <option value="grid">tileset (every cell is a tile)</option>
+            </select>
+          </label>
+          <label className="field">
             <span>grid</span>
-            <select value={layout} onChange={(e) => setLayout(Number(e.target.value))} title="Grid the sheet's pieces are laid out on">
-              {[48, 64, 96, 128].map((g) => (
+            <select value={layout} onChange={(e) => setLayout(Number(e.target.value))} title="Grid the sheet's pieces are laid out on (the tile size for a tileset)">
+              {[16, 32, 48, 64, 96, 128].map((g) => (
                 <option key={g} value={g}>
                   {g}px
                 </option>

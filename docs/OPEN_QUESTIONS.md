@@ -84,8 +84,8 @@ Answer: They stand at random spaces in town for now, nearer their work when poss
 
 ## I. Asset packs (2026-09-07)
 
-Seven pixel-art packs (town, gothic, farm, dreamland, rome, steampunk, forest) were cut into 5,424 library pieces (3,804 props, 1,620 tiles) with `node tools/scripts/import-sheets.mjs` and committed under `assets/props|tiles/<pack>/`. Every solid texture area is cut into 96px tiles (decided 2026-09-07: the first cut had kept many of them whole as "backgrounds"). The cutter is heuristic: a few touching props came out merged and a few thin props (fences, gates) came out in parts. Fix as you go: re-import a sheet from the editor's **Import sheet…** dialog with a different grid or with tile cutting off, delete or rename pieces in the asset panel, and **prune** a pack when you know which pieces you will never use.
+The first set (seven 768px pixel-art packs: town, gothic, farm, dreamland, rome, steampunk, forest; 5,424 cut pieces) was **removed** the same day on Amanda's decision, together with the twelve placements that used it. The library now holds seven craftpix packs (`assets/README.md`): five cartoon platformer tilesets (`workshop`, `tailor`, `market`, `village`, `farm`; 120 ready-made pieces each: two parallax background layers, modular building parts, props, thirteen 128px ground tiles) and two 16px top-down pixel-art packs (`farm_topdown`, `home_topdown`; objects and tilesets cut with the sheet cutter's `objects` and `grid` modes; animation strips and the water-detail tileset left out). 1,881 pieces in all. The repository stays private because the craftpix licence forbids redistributing the files.
 
-**I1. Scale.** The packs are 1:1 pixel art (a house is about 190px tall) next to smooth character art. Do you want the props drawn at 1x, or a default 1.5x/2x scale per pack? (Every placement has its own `scale`; a per-pack default is a one-line change.)
-Default: 1x.
+**I1. Top-down art in a side-scroller.** The two top-down packs are drawn from above at 16px, next to 128px cartoon platformer art. Their props (plants, furniture, animals' houses) can pass as decoration at 2x–4x scale; their ground and water tiles will look odd on a side view. Keep them as an option, or drop them to keep the tile tab short?
+Default: keep.
 Answer:

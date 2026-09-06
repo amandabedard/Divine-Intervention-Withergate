@@ -14,7 +14,9 @@ export interface SheetPiece {
 }
 
 export interface SheetOptions {
+  mode?: 'auto' | 'objects' | 'grid';
   alphaMin?: number;
+  gap?: number;
   layout?: number;
   cell?: number;
   gapTolerance?: number;

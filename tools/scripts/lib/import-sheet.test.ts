@@ -4,6 +4,7 @@ import path from 'node:path';
 import { PNG } from 'pngjs';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { AssetManifest } from '@withergate/shared';
+import { cleanName, importFolder, kindForFolder } from './import-folder.mjs';
 import { importSheet } from './import-sheet.mjs';
 
 /** A 384x288 sheet: two props in the top row of cells, a 192x192 block of two textures below. */
@@ -79,6 +80,62 @@ describe('importSheet', () => {
     expect(r.pieces).toHaveLength(6);
     expect(manifest.assets).toHaveLength(0);
     expect(fs.existsSync(path.join(dir, 'dry'))).toBe(false);
+  });
+
+  it('objects mode cuts spaced-out objects by their pixels, grid mode makes every cell a tile', () => {
+    // objects: the house and the cart sit in the same rows and columns, so only clusters tell them apart
+    const objects = importSheet({ assetsDir: dir, manifest: { version: 1, assets: [] }, pack: 'obj', name: 'sheet.png', buffer: makeSheet(), options: { mode: 'objects' }, dryRun: true });
+    const rects = objects.pieces.map((p) => [p.x, p.y, p.w, p.h]).sort((a, b) => a[0]! - b[0]!);
+    expect(objects.pieces.every((p) => p.kind === 'prop')).toBe(true);
+    expect(rects).toEqual([
+      [0, 96, 192, 192],
+      [8, 8, 80, 80],
+      [110, 30, 60, 40],
+    ]);
+    // grid: 16px cells, empty ones skipped, identical ones once
+    const grid = importSheet({ assetsDir: dir, manifest: { version: 1, assets: [] }, pack: 'grd', name: 'sheet.png', buffer: makeSheet(), options: { mode: 'grid', layout: 96 }, dryRun: true });
+    expect(grid.pieces.every((p) => p.kind === 'tile' && p.w === 96 && p.h === 96)).toBe(true);
+    expect(grid.pieces.map((p) => [p.x, p.y])).toEqual([
+      [0, 0],
+      [96, 0],
+      [0, 96],
+      [96, 96],
+      [0, 192],
+      [96, 192],
+    ]);
+  });
+
+  it('imports a folder of ready-made files, kind by subfolder, and is idempotent', () => {
+    const src = path.join(dir, 'pack');
+    const png = (w: number, h: number) => {
+      const p = new PNG({ width: w, height: h });
+      p.data.fill(200);
+      return PNG.sync.write(p);
+    };
+    fs.mkdirSync(path.join(src, 'Background'), { recursive: true });
+    fs.mkdirSync(path.join(src, 'Building'), { recursive: true });
+    fs.mkdirSync(path.join(src, 'Platformer'), { recursive: true });
+    fs.mkdirSync(path.join(src, '__MACOSX', 'Building'), { recursive: true });
+    fs.writeFileSync(path.join(src, 'Background', 'Background - Layer 00.png'), png(300, 200));
+    fs.writeFileSync(path.join(src, 'Building', 'Village_Level_Set_Building - Wall A 02.png'), png(128, 320));
+    fs.writeFileSync(path.join(src, 'Platformer', 'Ground_01.png'), png(128, 128));
+    fs.writeFileSync(path.join(src, '__MACOSX', 'Building', '._junk.png'), png(4, 4));
+    fs.writeFileSync(path.join(src, 'Preview.png'), png(50, 50));
+    const manifest: AssetManifest = { version: 1, assets: [] };
+    const r = importFolder({ assetsDir: path.join(dir, 'lib'), manifest, pack: 'village', dir: src, credit: 'craftpix.net' });
+    expect(r.created).toBe(3);
+    expect(manifest.assets.map((a) => [a.id, a.kind, a.file])).toEqual([
+      ['background_village_layer_00', 'background', 'backgrounds/village/layer_00.png'],
+      ['prop_village_wall_a_02', 'prop', 'props/village/wall_a_02.png'],
+      ['tile_village_ground_01', 'tile', 'tiles/village/ground_01.png'],
+    ]);
+    expect(manifest.assets[1]).toMatchObject({ w: 128, h: 320, tags: ['village', 'building'], credit: 'craftpix.net', pack: 'village', pixel: false, source: { sheet: 'village/Building/Village_Level_Set_Building - Wall A 02.png', x: 0, y: 0 } });
+    expect(fs.existsSync(path.join(dir, 'lib', 'props', 'village', 'wall_a_02.png'))).toBe(true);
+    const again = importFolder({ assetsDir: path.join(dir, 'lib'), manifest, pack: 'village', dir: src });
+    expect(again.created).toBe(0);
+    expect(again.existing).toBe(3);
+    expect(cleanName('Cartoon_Medieval_Farm_Level_Set_Environment - Rock 01.png')).toBe('Rock 01');
+    expect(kindForFolder('Platformer')).toBe('tile');
   });
 
   it('rejects a bad pack id', () => {

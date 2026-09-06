@@ -12,7 +12,7 @@
 - `npm install` (`.npmrc` sets legacy-peer-deps; npm's resolver crashes on vitest's optional peers otherwise)
 - `npm run dev` builds sprite atlases then serves the game at http://localhost:5173 (content hot-reloads on save)
 - `npm run editor` serves the map/asset editor at http://localhost:5174
-- `node tools/scripts/import-sheets.mjs --pack <id> <folder or pngs>` cuts asset sheets into library pieces (`--dry --debug <dir>` previews the cuts); the editor's "Import sheet…" does the same for one file
+- `node tools/scripts/import-folder.mjs --pack <id> --credit <text> <folder>` imports a pack of ready-made PNGs (kind by subfolder); `node tools/scripts/import-sheets.mjs --pack <id> --mode objects|grid|auto <pngs>` cuts sheets into pieces (`--dry --debug <dir>` previews the cuts; the editor's "Import sheet…" does the same for one file); `node tools/scripts/remove-pack.mjs --strip-maps <pack>` removes a pack and the placements that used it. Packs and credits: `assets/README.md`
 - `npm run validate -- --coverage` checks every content file (schema + cross references) and prints per-character coverage
 - `npm test` (vitest), `npm run typecheck` (tsc for shared, game, editor), `npm run build`
 - In the browser, `` ` `` toggles the debug panel (time, relationships, tags, map jump, and a Battle section to pick an enemy, party, weapon and powers); `window.__wg` exposes `store`, `session`, `game` in dev
