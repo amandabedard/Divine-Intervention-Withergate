@@ -12,6 +12,7 @@
 - `npm install` (`.npmrc` sets legacy-peer-deps; npm's resolver crashes on vitest's optional peers otherwise)
 - `npm run dev` builds sprite atlases then serves the game at http://localhost:5173 (content hot-reloads on save)
 - `npm run editor` serves the map/asset editor at http://localhost:5174
+- `node tools/scripts/import-sheets.mjs --pack <id> <folder or pngs>` cuts asset sheets into library pieces (`--dry --debug <dir>` previews the cuts); the editor's "Import sheet…" does the same for one file
 - `npm run validate -- --coverage` checks every content file (schema + cross references) and prints per-character coverage
 - `npm test` (vitest), `npm run typecheck` (tsc for shared, game, editor), `npm run build`
 - In the browser, `` ` `` toggles the debug panel (time, relationships, tags, map jump, and a Battle section to pick an enemy, party, weapon and powers); `window.__wg` exposes `store`, `session`, `game` in dev
@@ -23,6 +24,7 @@
 - `game/src/core` pure game logic (state, conditions, effects, relationships, quests, time, schedule, dialog interpreter, session façade). No Phaser or React imports; tested with vitest.
 - `game/src/scenes` Phaser (Boot, World, draw helpers) · `game/src/ui` React overlay · `game/src/bridge` store + event bus · `game/plugins/content.ts` Vite plugin compiling `content/` into `virtual:withergate-content`
 - `tools/scripts/build-sprites.mjs` packs `assets/characters/<set>_sprites/{idle,leftwalk,rightwalk}N.png` into atlases and indexes `<set>_busts/<set>_<mood>.png` → `game/public/generated/`
+- `tools/scripts/lib/sheet.mjs` cuts prop/tile sheets into pieces (pure, pngjs; tested via `import-sheet.test.ts`); `assets/manifest.json` lists every library asset (`pack`, `pixel`, `source` for imported pieces); the game loads only the assets its maps use (`game/src/scenes/assets.ts`)
 - `content/` sample content around the character `aldric` and three maps (`withergate`, `withergate_quarters`, `east_road`)
 
 ## Conventions

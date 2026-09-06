@@ -6,6 +6,7 @@ import type { EnterWorldData } from '../bridge/bus';
 import { store } from '../bridge/store';
 import { charactersOn } from '../core/schedule';
 import { session } from '../core/session';
+import { applyPixelFilters, assetsUsedByMap, queueAssets, textureKey } from './assets';
 import {
   DEPTH,
   drawGround,
@@ -77,6 +78,8 @@ export class WorldScene extends Phaser.Scene {
   /** World interactions are ignored until this time, so a key that closed a menu is not replayed. */
   private uiBlockedUntil = 0;
   private padPrevA = false;
+  /** Assets that failed to load once; not retried, so a bad file cannot restart the scene forever. */
+  private static failedAssets = new Set<string>();
 
   constructor() {
     super('world');
@@ -92,6 +95,17 @@ export class WorldScene extends Phaser.Scene {
     const map = content.maps[this.enter.map] ?? content.maps[Object.keys(content.maps)[0]!];
     if (!map || !state) {
       this.add.text(640, 360, 'No maps in content/maps yet.', { fontSize: '24px', color: '#fff' }).setOrigin(0.5);
+      return;
+    }
+    // Art placed on this map since boot (or added from the editor) is loaded now, then the scene restarts.
+    const missing = assetsUsedByMap(map).filter((id) => !this.textures.exists(textureKey(id)) && !WorldScene.failedAssets.has(id));
+    if (missing.length && queueAssets(this, store.manifest, missing) > 0) {
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        applyPixelFilters(this, store.manifest);
+        for (const id of missing) if (!this.textures.exists(textureKey(id))) WorldScene.failedAssets.add(id);
+        this.scene.restart(this.enter);
+      });
+      this.load.start();
       return;
     }
     this.map = map;

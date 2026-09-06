@@ -17,6 +17,26 @@ export interface ContentIndex {
   issues: Issue[];
 }
 
+export interface SheetPiece {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  kind: 'prop' | 'tile' | 'background';
+  tags: string[];
+  id?: string;
+  status?: 'created' | 'exists';
+}
+
+export interface SheetImportResult {
+  layout: string;
+  width: number;
+  height: number;
+  pieces: SheetPiece[];
+  created: number;
+  existing: number;
+}
+
 export interface EditorIndex {
   maps: MapSummary[];
   mapFiles: string[];
@@ -50,7 +70,9 @@ export const api = {
   patchAsset: (id: string, patch: Partial<Pick<AssetEntry, 'id' | 'tags' | 'placeholder' | 'credit'>>) =>
     call<AssetEntry>(`/api/assets/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteAsset: (id: string) => call<{ ok: true }>(`/api/assets/${id}`, { method: 'DELETE' }),
-  prune: () => call<{ moved: string[] }>('/api/assets/prune', { method: 'POST', body: '{}' }),
+  prune: (pack?: string) => call<{ moved: string[] }>('/api/assets/prune', { method: 'POST', body: JSON.stringify({ pack: pack ?? null }) }),
+  importSheet: (body: { name: string; pack: string; dataUrl: string; options?: { cutTiles?: boolean; layout?: number; cell?: number; gapTolerance?: number }; dryRun?: boolean }) =>
+    call<SheetImportResult>('/api/assets/sheet', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 export function readFileAsDataUrl(file: File): Promise<string> {

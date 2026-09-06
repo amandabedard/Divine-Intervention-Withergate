@@ -25,7 +25,7 @@ body,
 }
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr 340px;
+  grid-template-columns: 300px 1fr 340px;
   grid-template-rows: 44px 1fr;
   grid-template-areas:
     'top top top'
@@ -203,27 +203,137 @@ h4 {
 .asset-actions button {
   padding: 2px 6px;
 }
-.canvas-wrap {
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 4px;
+  margin: 6px 0;
+}
+.thumb-cell {
+  padding: 2px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  background: repeating-conic-gradient(#2a2d38 0 25%, #1a1c24 0 50%) 0 0 / 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.thumb-cell.on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+.thumb-cell img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+img.pixel {
+  image-rendering: pixelated;
+}
+.asset-details {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  margin: 6px 0;
+  background: var(--panel-2);
+  font-size: 12px;
+}
+.asset-details .big {
+  display: block;
+  max-width: 100%;
+  max-height: 140px;
+  margin: 4px auto;
+  background: repeating-conic-gradient(#2a2d38 0 25%, #1a1c24 0 50%) 0 0 / 12px 12px;
+}
+.asset-details b {
+  word-break: break-all;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  width: min(920px, 92vw);
+  max-height: 92vh;
+  overflow: auto;
+}
+.modal h3 {
+  margin: 0 0 8px;
+  font-family: Georgia, serif;
+  font-weight: normal;
+  color: var(--gold);
+}
+.modal canvas {
+  display: block;
+  max-width: 100%;
+  background: repeating-conic-gradient(#2a2d38 0 25%, #1a1c24 0 50%) 0 0 / 16px 16px;
+  border: 1px solid var(--line);
+  margin: 8px 0;
+}
+.panel.assets input[type='search'] {
+  flex: 1;
+}
+.canvas-area {
   grid-area: canvas;
   position: relative;
   overflow: hidden;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
 }
-.canvas-wrap canvas {
+.canvas-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: scroll;
+  overscroll-behavior: contain;
+  scrollbar-color: #4a4d5a var(--bg);
+}
+.canvas-scroll canvas {
   display: block;
+  position: sticky;
+  top: 0;
+  left: 0;
   touch-action: none;
 }
-.canvas-status {
+.scroll-space {
   position: absolute;
   left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 4px 10px;
-  background: rgba(20, 21, 28, 0.85);
+  top: 0;
+  pointer-events: none;
+}
+.canvas-status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 10px;
+  background: rgba(20, 21, 28, 0.95);
   color: var(--muted);
   font-size: 12px;
   border-top: 1px solid var(--line);
-  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.canvas-status .hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+.canvas-status button {
+  padding: 2px 7px;
+  font-size: 12px;
 }
 .field {
   display: flex;

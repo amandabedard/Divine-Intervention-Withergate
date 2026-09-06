@@ -3,18 +3,10 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSyn
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { AssetManifestSchema, GameMapSchema, mapEntities } from '@withergate/shared';
+import { ASSET_KIND_DIRS as KIND_DIRS, AssetManifestSchema, GameMapSchema, mapEntities } from '@withergate/shared';
 import type { AssetEntry, AssetKind, AssetManifest, GeneratedIndex } from '@withergate/shared';
 import { flattenZodIssues, loadContent } from '@withergate/shared/node';
-
-const KIND_DIRS: Record<AssetKind, string> = {
-  tile: 'tiles',
-  prop: 'props',
-  background: 'backgrounds',
-  ui: 'ui',
-  icon: 'icons',
-  audio: 'audio',
-};
+import { importSheet } from '../../scripts/lib/import-sheet.mjs';
 
 export function editorApiPlugin({ repoRoot }: { repoRoot: string }): Plugin {
   const contentDir = path.join(repoRoot, 'content');
@@ -229,12 +221,29 @@ export function editorApiPlugin({ repoRoot }: { repoRoot: string }): Plugin {
         writeManifest(manifest);
         return json(res, 200, entry);
       }
+      if (method === 'POST' && parts[1] === 'sheet') {
+        // Cut a sheet into pieces: { name, pack, dataUrl, options?, dryRun? }
+        const body = await readBody(req);
+        const m = /^data:image\/png;base64,(.+)$/.exec(String(body.dataUrl ?? ''));
+        if (!m) return json(res, 400, { error: 'expected a PNG data URL' });
+        const pack = String(body.pack ?? '').trim();
+        if (!validId(pack)) return json(res, 400, { error: 'pack must be lowercase_with_underscores' });
+        const name = path.basename(String(body.name ?? 'sheet.png')).replace(/[^a-zA-Z0-9._-]+/g, '_');
+        const options = typeof body.options === 'object' && body.options ? body.options : {};
+        const result = importSheet({ assetsDir, manifest, pack, name, buffer: Buffer.from(m[1]!, 'base64'), options, dryRun: !!body.dryRun });
+        if (!body.dryRun) writeManifest(manifest);
+        return json(res, 200, result);
+      }
       if (method === 'POST' && parts[1] === 'prune') {
+        // Unused assets of one pack ({ pack }), or unused assets outside any pack, go to assets/_unused/
+        const body = await readBody(req);
+        const pack = body.pack ? String(body.pack) : null;
         const used = usage();
         const unusedDir = path.join(assetsDir, '_unused');
         const moved: string[] = [];
         manifest.assets = manifest.assets.filter((a) => {
           if (used[a.id]?.length) return true;
+          if (pack ? a.pack !== pack : a.pack) return true;
           const from = path.join(assetsDir, a.file);
           if (existsSync(from)) {
             const to = path.join(unusedDir, a.file);

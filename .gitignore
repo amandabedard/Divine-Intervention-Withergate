@@ -21,3 +21,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# original asset sheets kept for re-importing from the editor (the cut pieces are committed instead)
+assets/_sheets/

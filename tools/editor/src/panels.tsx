@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ASSET_KINDS, EXIT_DIRECTIONS, IMAGE_ASSET_KINDS, PHASES } from '@withergate/shared';
-import type { AssetKind, EntityOf, GameMap, MapEntity, Placement } from '@withergate/shared';
+import type { AssetEntry, AssetKind, EntityOf, GameMap, MapEntity, Placement } from '@withergate/shared';
 import { api, imageSize, readFileAsDataUrl } from './api';
+import type { SheetImportResult } from './api';
 import { ENTITY_TYPES, LAYERS, editor, spawnsOf, useEditor } from './state';
 import type { LayerName, Selection, Tool } from './state';
 
@@ -87,9 +88,14 @@ export function TopBar() {
 
 // --- assets -----------------------------------------------------------------------
 
+const THUMB_LIMIT = 600;
+
 export function AssetPanel() {
   const st = useEditor();
   const [kind, setKind] = useState<AssetKind | 'characters'>('prop');
+  const [query, setQuery] = useState('');
+  const [pack, setPack] = useState('');
+  const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -112,58 +118,40 @@ export function AssetPanel() {
     }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm(`Delete ${id} from assets/? (refused if a map still uses it)`)) return;
-    try {
-      await api.deleteAsset(id);
-      await editor.refreshIndex();
-    } catch (e) {
-      editor.status((e as Error).message);
-    }
-  };
-
   const prune = async () => {
-    const unused = st.manifest.assets.filter((a) => !(st.usage[a.id]?.length)).length;
-    if (!unused) return editor.status('Nothing unused.');
-    if (!confirm(`Move ${unused} unused asset(s) to assets/_unused/?`)) return;
-    const r = await api.prune();
+    const candidates = st.manifest.assets.filter((a) => !(st.usage[a.id]?.length) && (pack ? a.pack === pack : !a.pack));
+    if (!candidates.length) return editor.status(pack ? `Nothing unused in the ${pack} pack.` : 'Nothing unused outside the packs.');
+    const what = pack ? `unused asset(s) of the ${pack} pack` : 'unused asset(s) that are not part of a pack';
+    if (!confirm(`Move ${candidates.length} ${what} to assets/_unused/?`)) return;
+    const r = await api.prune(pack || undefined);
     await editor.refreshIndex();
     editor.status(`Moved ${r.moved.length} asset(s) to assets/_unused/`);
   };
 
-  const list = st.manifest.assets.filter((a) => a.kind === kind);
+  const packs = useMemo(() => [...new Set(st.manifest.assets.map((a) => a.pack ?? '').filter(Boolean))].sort(), [st.manifest]);
+  const q = query.trim().toLowerCase();
+  const ofKind = st.manifest.assets.filter((a) => a.kind === kind);
+  const list = ofKind.filter((a) => (!pack || a.pack === pack) && (!q || a.id.includes(q) || a.tags.some((t) => t.includes(q))));
+  const selected = st.manifest.assets.find((a) => a.id === st.assetId);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const a of st.manifest.assets) c[a.kind] = (c[a.kind] ?? 0) + 1;
+    return c;
+  }, [st.manifest]);
+
   return (
     <div className="panel assets" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void upload(e.dataTransfer.files); }}>
       <div className="tabs">
         {ASSET_KINDS.filter((k) => k !== 'audio').map((k) => (
           <button key={k} className={kind === k ? 'on' : ''} onClick={() => setKind(k)}>
             {k}
+            {counts[k] ? <small className="muted"> {counts[k]}</small> : null}
           </button>
         ))}
         <button className={kind === 'characters' ? 'on' : ''} onClick={() => setKind('characters')}>
           characters
         </button>
       </div>
-      {kind !== 'characters' && (
-        <div className="row">
-          <button onClick={() => fileRef.current?.click()} disabled={busy}>
-            {busy ? 'Uploading…' : `Upload ${kind}s`}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void upload(e.target.files)} />
-          <button className="subtle" onClick={prune} title="Move assets no map references to assets/_unused/">
-            prune unused
-          </button>
-        </div>
-      )}
-      {kind !== 'characters' && (
-        <button className={`asset ${st.assetId === 'placeholder' ? 'on' : ''}`} onClick={() => editor.set({ assetId: 'placeholder', tool: 'place' })}>
-          <span className="thumb block">▭</span>
-          <span>
-            <b>Placeholder block</b>
-            <small>labelled colour block; resize and recolour after placing</small>
-          </span>
-        </button>
-      )}
       {kind === 'characters' ? (
         <div className="muted small">
           Character sets come from <code>assets/characters/&lt;set&gt;_sprites</code> and <code>_busts</code>, packed by <code>npm run build:sprites</code>.
@@ -177,32 +165,224 @@ export function AssetPanel() {
           </ul>
         </div>
       ) : (
-        list.map((a) => {
-          const used = st.usage[a.id]?.length ?? 0;
-          return (
-            <div key={a.id} className={`asset ${st.assetId === a.id ? 'on' : ''}`} onClick={() => editor.set({ assetId: a.id, tool: 'place' })}>
-              {IMAGE_ASSET_KINDS.includes(a.kind) ? <img className="thumb" src={`/art/${a.file}`} alt="" /> : <span className="thumb block">♪</span>}
-              <span>
-                <b>{a.id}</b>
-                <small>
-                  {a.w && a.h ? `${a.w}×${a.h} · ` : ''}
-                  {used ? `used in ${used} map${used === 1 ? '' : 's'}` : 'unused'}
-                  {a.placeholder ? ' · placeholder' : ''}
-                </small>
-              </span>
-              <span className="asset-actions">
-                <button title="toggle placeholder flag" onClick={(e) => { e.stopPropagation(); void api.patchAsset(a.id, { placeholder: !a.placeholder }).then(() => editor.refreshIndex()); }}>
-                  {a.placeholder ? '☑' : '☐'}
-                </button>
-                <button title="delete" onClick={(e) => { e.stopPropagation(); void remove(a.id); }}>
-                  ×
-                </button>
-              </span>
-            </div>
-          );
-        })
+        <>
+          <div className="row tight">
+            <input type="search" placeholder="search id or tag" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <select value={pack} onChange={(e) => setPack(e.target.value)} title="Asset pack">
+              <option value="">all packs</option>
+              {packs.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="row tight" style={{ margin: '6px 0' }}>
+            <button onClick={() => fileRef.current?.click()} disabled={busy} title={`Upload single images as ${kind}s`}>
+              {busy ? 'Uploading…' : `Upload ${kind}s`}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void upload(e.target.files)} />
+            <button onClick={() => setImporting(true)} title="Cut a sheet of props or tiles into separate assets">
+              Import sheet…
+            </button>
+            <button className="subtle" onClick={prune} title="Move unused assets (of the selected pack, or outside any pack) to assets/_unused/">
+              prune
+            </button>
+          </div>
+          <button className={`asset ${st.assetId === 'placeholder' ? 'on' : ''}`} onClick={() => editor.set({ assetId: 'placeholder', tool: 'place' })}>
+            <span className="thumb block">▭</span>
+            <span>
+              <b>Placeholder block</b>
+              <small>labelled colour block; resize and recolour after placing</small>
+            </span>
+          </button>
+          <div className="muted small">
+            {list.length === ofKind.length ? `${ofKind.length} ${kind}${ofKind.length === 1 ? '' : 's'}` : `${list.length} of ${ofKind.length} ${kind}s`}
+            {list.length > THUMB_LIMIT ? ` · showing the first ${THUMB_LIMIT}, narrow the search` : ''} · click to place
+          </div>
+          <div className="thumbs">
+            {list.slice(0, THUMB_LIMIT).map((a) => (
+              <button
+                key={a.id}
+                className={`thumb-cell ${st.assetId === a.id ? 'on' : ''}`}
+                title={`${a.id}${a.w && a.h ? ` · ${a.w}×${a.h}` : ''}`}
+                onClick={() => editor.set({ assetId: a.id, tool: 'place' })}
+              >
+                {IMAGE_ASSET_KINDS.includes(a.kind) ? <img className={a.pixel ? 'pixel' : ''} src={`/art/${a.file}`} alt="" loading="lazy" /> : <span>♪</span>}
+              </button>
+            ))}
+          </div>
+          {!ofKind.length && <div className="muted small">No {kind}s yet. Drop image files here, use Upload, or import a sheet.</div>}
+          {selected && <AssetDetails asset={selected} />}
+        </>
       )}
-      {kind !== 'characters' && !list.length && <div className="muted small">No {kind}s yet. Drop image files here or use Upload.</div>}
+      {importing && <SheetImportDialog defaultPack={pack || packs[0] || 'misc'} onClose={() => setImporting(false)} />}
+    </div>
+  );
+}
+
+function AssetDetails({ asset }: { asset: AssetEntry }) {
+  const st = useEditor();
+  const usedIn = st.usage[asset.id] ?? [];
+  const patch = async (p: Parameters<typeof api.patchAsset>[1]) => {
+    try {
+      const r = await api.patchAsset(asset.id, p);
+      await editor.refreshIndex();
+      if (r.id !== asset.id) editor.set({ assetId: r.id });
+    } catch (e) {
+      editor.status((e as Error).message);
+    }
+  };
+  const rename = () => {
+    const id = prompt('New asset id (lowercase_with_underscores; map references are rewritten):', asset.id);
+    if (id && id !== asset.id) void patch({ id });
+  };
+  const remove = async () => {
+    if (!confirm(`Delete ${asset.id} from assets/? (refused if a map still uses it)`)) return;
+    try {
+      await api.deleteAsset(asset.id);
+      editor.set({ assetId: 'placeholder' });
+      await editor.refreshIndex();
+    } catch (e) {
+      editor.status((e as Error).message);
+    }
+  };
+  return (
+    <div className="asset-details">
+      {IMAGE_ASSET_KINDS.includes(asset.kind) && <img className={`big ${asset.pixel ? 'pixel' : ''}`} src={`/art/${asset.file}`} alt="" />}
+      <div>
+        <b>{asset.id}</b>
+      </div>
+      <div className="muted">
+        {asset.w && asset.h ? `${asset.w}×${asset.h}` : ''}
+        {asset.pack ? ` · pack ${asset.pack}` : ''}
+        {asset.source ? ` · from ${asset.source.sheet} at ${asset.source.x},${asset.source.y}` : ''}
+        {asset.pixel ? ' · pixel art' : ''}
+      </div>
+      <div className="muted">{usedIn.length ? `used in ${usedIn.join(', ')}` : 'not placed on any map yet'}</div>
+      <label className="field" style={{ margin: '6px 0' }}>
+        <span>tags</span>
+        <input defaultValue={asset.tags.join(', ')} key={asset.id} onBlur={(e) => void patch({ tags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })} />
+      </label>
+      <div className="row tight">
+        <button className="subtle" onClick={rename}>rename</button>
+        <button className="subtle" onClick={() => void patch({ placeholder: !asset.placeholder })} title="Placeholder art gets listed in the coverage report">
+          {asset.placeholder ? '☑ placeholder' : '☐ placeholder'}
+        </button>
+        <button className="danger" onClick={() => void remove()} disabled={usedIn.length > 0} title={usedIn.length ? 'Still used on a map' : 'Delete the file and the manifest entry'}>
+          delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Cut a sheet of props or tiles into separate assets, with a preview of the cuts. */
+function SheetImportDialog({ defaultPack, onClose }: { defaultPack: string; onClose: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [dataUrl, setDataUrl] = useState('');
+  const [pack, setPack] = useState(defaultPack);
+  const [cutTiles, setCutTiles] = useState(true);
+  const [layout, setLayout] = useState(96);
+  const [result, setResult] = useState<SheetImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const pick = async (f: File | null) => {
+    setFile(f);
+    setResult(null);
+    setDataUrl(f ? await readFileAsDataUrl(f) : '');
+  };
+  const run = async (dryRun: boolean) => {
+    if (!file || !dataUrl) return;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await api.importSheet({ name: file.name, pack: pack.trim(), dataUrl, options: { cutTiles, layout }, dryRun });
+      setResult(r);
+      if (!dryRun) {
+        await editor.refreshIndex();
+        editor.status(`Imported ${r.created} piece(s) from ${file.name}${r.existing ? ` (${r.existing} were already in the library)` : ''}`);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !dataUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 860 / img.naturalWidth);
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      if (!result) return;
+      ctx.lineWidth = 1;
+      for (const p of result.pieces) {
+        ctx.strokeStyle = p.kind === 'tile' ? '#22d3ee' : p.kind === 'background' ? '#f472b6' : '#7fd08a';
+        ctx.strokeRect(p.x * scale + 0.5, p.y * scale + 0.5, p.w * scale - 1, p.h * scale - 1);
+      }
+    };
+    img.src = dataUrl;
+  }, [dataUrl, result]);
+
+  const kinds = result ? result.pieces.reduce<Record<string, number>>((acc, p) => ({ ...acc, [p.kind]: (acc[p.kind] ?? 0) + 1 }), {}) : {};
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Import a sheet</h3>
+        <div className="muted small">
+          A sheet is one image holding many props or tiles (the 768px packs). Each piece becomes its own asset under <code>assets/&lt;kind&gt;/&lt;pack&gt;/</code>, tagged with the pack name.
+          Importing the same sheet again only adds pieces that are not in the library yet.
+        </div>
+        <div className="row">
+          <label className="field">
+            <span>sheet (png)</span>
+            <input type="file" accept="image/png" onChange={(e) => void pick(e.target.files?.[0] ?? null)} />
+          </label>
+          <label className="field">
+            <span>pack</span>
+            <input value={pack} onChange={(e) => setPack(e.target.value)} placeholder="town, forest…" />
+          </label>
+          <label className="field">
+            <span>grid</span>
+            <select value={layout} onChange={(e) => setLayout(Number(e.target.value))} title="Grid the sheet's pieces are laid out on">
+              {[48, 64, 96, 128].map((g) => (
+                <option key={g} value={g}>
+                  {g}px
+                </option>
+              ))}
+            </select>
+          </label>
+          <Chk label="cut solid blocks into tiles" value={cutTiles} onChange={setCutTiles} />
+        </div>
+        <div className="row tight">
+          <button onClick={() => void run(true)} disabled={!file || busy}>
+            {busy ? 'Working…' : 'Preview cuts'}
+          </button>
+          <button className="primary" onClick={() => void run(false)} disabled={!result || busy}>
+            Import {result ? `${result.pieces.length} piece(s)` : ''}
+          </button>
+          <button className="subtle" onClick={onClose}>
+            Close
+          </button>
+          {result && (
+            <span className="muted small">
+              {Object.entries(kinds).map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`).join(', ')}
+              {result.existing ? ` · ${result.existing} already imported` : ''} · green = prop, blue = tile, pink = background
+            </span>
+          )}
+          {error && <span className="issue">{error}</span>}
+        </div>
+        {dataUrl && <canvas ref={canvasRef} />}
+      </div>
     </div>
   );
 }
@@ -315,6 +495,18 @@ function MapSettings({ map }: { map: GameMap }) {
         <Num label="height" value={map.size.height} onChange={(v) => up((m) => { m.size.height = v; }, 'h')} step={32} />
         <Num label="ground y" value={map.ground_y} onChange={(v) => up((m) => { m.ground_y = v; }, 'gy')} step={8} />
       </div>
+      <div className="row tight">
+        <button className="subtle" onClick={() => editor.extendMap('left', 640)} title="Add 640px on the left; everything already placed shifts right">
+          ⇐ widen left
+        </button>
+        <button className="subtle" onClick={() => editor.extendMap('right', 640)} title="Add 640px on the right">
+          widen right ⇒
+        </button>
+        <button className="subtle" onClick={() => editor.extendMap('bottom', 160)} title="Add 160px at the bottom">
+          taller ⇓
+        </button>
+      </div>
+      <div className="muted small">You can also drag the map's right or bottom edge on the canvas.</div>
       <h4>Ambience</h4>
       <Color label="sky top" value={map.ambience.sky?.top} onChange={(v) => up((m) => { m.ambience.sky = { top: v, bottom: m.ambience.sky?.bottom ?? v }; }, 'skyt')} />
       <Color label="sky bottom" value={map.ambience.sky?.bottom} onChange={(v) => up((m) => { m.ambience.sky = { top: m.ambience.sky?.top ?? v, bottom: v }; }, 'skyb')} />
@@ -497,7 +689,7 @@ function SelectionEditor({ map, sel }: { map: GameMap; sel: NonNullable<Selectio
             }
           />
           {a.kind === 'sign' && <Txt label="text" value={a.text} onChange={(v) => setE<EntityOf<'interactable'>>((ent) => { (ent.action as any).text = v; }, 'text')} />}
-          {a.kind === 'open_ui' && <Sel label="ui" value={a.ui} options={['bed', 'living_quarters', 'general_store', 'tavern', 'build', 'notice_board']} onChange={(v) => setE<EntityOf<'interactable'>>((ent) => { (ent.action as any).ui = v; }, 'ui')} />}
+          {a.kind === 'open_ui' && <Sel label="ui" value={a.ui} options={['bed', 'quarters', 'living_quarters', 'general_store', 'tavern', 'build', 'shrine', 'notice_board']} onChange={(v) => setE<EntityOf<'interactable'>>((ent) => { (ent.action as any).ui = v; }, 'ui')} />}
           {a.kind === 'run_script' && <Sel label="script" value={a.script} options={st.content.shared.length ? st.content.shared : [a.script]} onChange={(v) => setE<EntityOf<'interactable'>>((ent) => { (ent.action as any).script = v; }, 'script')} />}
           {a.kind === 'facility' && <Sel label="facility" value={a.facility} options={st.content.facilities.map((f) => f.id)} onChange={(v) => setE<EntityOf<'interactable'>>((ent) => { (ent.action as any).facility = v; }, 'facility')} />}
           {a.kind === 'forage' && (
