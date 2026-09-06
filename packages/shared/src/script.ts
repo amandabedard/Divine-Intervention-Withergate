@@ -27,6 +27,8 @@ export interface RawBattle {
 /** Effects exactly as written in YAML (docs/content/conditions-and-effects.md). */
 export interface RawEffects {
   friendship?: number | Record<string, number>;
+  /** Friendship change for every current resident of Withergate (tavern gatherings). */
+  friendship_residents?: number;
   romance?: number | Record<string, number>;
   set_tier?: Record<string, Tier>;
   set_romance?: RomanceState | Record<string, RomanceState>;
@@ -41,7 +43,10 @@ export interface RawEffects {
   grace?: number;
   domain_points?: Partial<Record<Domain, number>>;
   faith?: number;
+  skill_points?: number;
   unlock_power?: string;
+  /** Weapons added to what the player owns (chosen at Quarters). */
+  weapons?: string[];
   stat_check_bonus?: { stat: Stat; amount: number; until?: 'day_end' | 'expedition_end' };
   flags?: Record<string, FlagValue>;
   increment?: Record<string, number>;
@@ -77,6 +82,7 @@ const numOrPerVillager = z.union([z.number(), z.record(ID, z.number())]);
 export const RawEffectsSchema: z.ZodType<RawEffects> = z.lazy(() =>
   z.strictObject({
     friendship: numOrPerVillager.optional(),
+    friendship_residents: z.number().optional(),
     romance: numOrPerVillager.optional(),
     set_tier: z.record(ID, z.enum(TIERS)).optional(),
     set_romance: z.union([z.enum(ROMANCE_STATES), z.record(ID, z.enum(ROMANCE_STATES))]).optional(),
@@ -90,7 +96,9 @@ export const RawEffectsSchema: z.ZodType<RawEffects> = z.lazy(() =>
     grace: z.number().optional(),
     domain_points: z.partialRecord(z.enum(DOMAINS), z.number()).optional(),
     faith: z.number().optional(),
+    skill_points: z.number().int().optional(),
     unlock_power: ID.optional(),
+    weapons: z.array(ID).optional(),
     stat_check_bonus: z
       .strictObject({
         stat: z.enum(STATS),

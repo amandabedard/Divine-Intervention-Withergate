@@ -66,7 +66,7 @@ export function drawGround(scene: Phaser.Scene, map: GameMap): void {
   g.fillRect(0, map.ground_y, map.size.width, map.size.height - map.ground_y);
   const path = Phaser.Display.Color.IntegerToColor(ground).lighten(12).color;
   g.fillStyle(path, 1);
-  g.fillRect(0, map.ground_y - 4, map.size.width, 30);
+  g.fillRect(0, map.ground_y - 4, map.size.width, 40);
   g.setDepth(DEPTH.ground);
   if (map.interior) {
     // wall skirting
@@ -122,7 +122,7 @@ export function drawPlacement(scene: Phaser.Scene, p: Placement, depth: number):
   return c;
 }
 
-export function drawSlot(scene: Phaser.Scene, x: number, y: number, size: 'small' | 'large', id: string): void {
+export function drawSlot(scene: Phaser.Scene, x: number, y: number, size: 'small' | 'large', text: string): void {
   const w = size === 'large' ? 320 : 200;
   const h = size === 'large' ? 240 : 160;
   const g = scene.add.graphics();
@@ -142,14 +142,14 @@ export function drawSlot(scene: Phaser.Scene, x: number, y: number, size: 'small
   rect(w, h, 0, h);
   rect(0, h, 0, 0);
   const label = scene.add
-    .text(w / 2, h / 2, `Build slot\n${id}`, {
+    .text(w / 2, h / 2, text, {
       fontFamily: 'Georgia, serif',
       fontSize: '16px',
       color: '#fff4e0',
       align: 'center',
     })
     .setOrigin(0.5)
-    .setAlpha(0.6);
+    .setAlpha(0.7);
   scene.add.container(x - w / 2, y - h, [g, label]).setDepth(DEPTH.slot);
 }
 

@@ -1,4 +1,5 @@
 import type { StageStep } from '@withergate/shared';
+import type { BattleEvent, BattleResult } from '../core/combat/battle';
 
 export interface EnterWorldData {
   map: string;
@@ -18,6 +19,14 @@ export interface Events {
   stage: { step: StageStep; done: () => void };
   /** Villager positions may have changed (recruited, override). */
   'npc.refresh': undefined;
+  /** A fight begins: the world pauses and the battle scene launches. */
+  'battle.start': { enemy: string };
+  /** One combat event to animate. */
+  'battle.event': BattleEvent;
+  /** The fight is over. */
+  'battle.end': { result: BattleResult };
+  /** Facilities were built, finished or demolished; the town map redraws. */
+  'town.changed': undefined;
 }
 
 type Handler<T> = (payload: T) => void;

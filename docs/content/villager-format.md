@@ -31,6 +31,7 @@ pronouns: she/her              # used only in system text ("She has left Witherg
 profession: logger             # doctor | warrior | farmer | academic | engineer | logger | miner | chef | explorer | craftsman | socialite
 home_town: dilsdurf            # aboridge | dilsdurf | heathel | mukrige | scottsburg | none (wanderer)
 romanceable: true
+protected: false               # true for story figures the corruption can never claim (the king)
 portrait_set: mara             # busts in assets/characters/mara_busts/mara_<mood>.png; every mood used in dialog must exist (neutral required)
 sprite_set: mara               # frames in assets/characters/mara_sprites/{idle,leftwalk,rightwalk}N.png
 
@@ -128,6 +129,7 @@ schedule:
 | `profession` | yes | one of the 11; exceptions allowed with `profession: none` |
 | `home_town` | yes | `none` for wanderers met on the road |
 | `romanceable` | yes | false → flirt always rejected with the standard line and no effect |
+| `protected` | no | default false; true means the corruption can never kill this character |
 | `portrait_set`, `sprite_set` | no | default to `id`; missing assets show the placeholder |
 | `bio` | yes | shown in Living Quarters and the journal |
 | `personality` | no | free text; not read by the game beyond reports |
@@ -142,6 +144,7 @@ schedule:
 | `recovery_days` | no | default 5 |
 | `recruit.workplace` | no | facility they work at once recruited; `none` = odd jobs. If they *need* it, also add `not_facility: X` to `leaves_if` |
 | `energy` | yes for recruitables | |
+| `store` | no | `{ food: 4, whetstone: 2 }`: resources or items that show up more often at the general store while they live in Withergate (weight, see `economy.yaml → stock`) |
 | `benefits` | no | see catalogue |
 | `schedule.home` | yes if they have a home town | any phase can be `{ map: none }` |
 | `schedule.withergate` | no | defaults derived from workplace and Living Quarters |

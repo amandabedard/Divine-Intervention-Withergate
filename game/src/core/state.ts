@@ -4,9 +4,11 @@ import {
   PHASES,
   RESOURCES,
   STATS,
+  TAGS_BLOCKING_EXPEDITIONS,
   faithLevelFor,
   mapEntities,
 } from '@withergate/shared';
+import type { BattleState } from './combat/battle';
 import type {
   ContentBundle,
   Domain,
@@ -34,6 +36,8 @@ export interface PlayerState {
   grace: number;
   energy: number;
   weaponId: string | null;
+  /** Weapons the player owns; one is equipped at a time (chosen at Quarters). */
+  weapons: string[];
   powers: string[];
   equippedPowers: string[];
   skillPoints: number;
@@ -71,6 +75,16 @@ export interface QuestState {
   startedDay: number;
 }
 
+/** One thing on the general store's shelves this week. */
+export interface StoreOffer {
+  /** A resource id or a gift item id. */
+  item: string;
+  /** Units left this week. */
+  qty: number;
+  /** Gold each; always above the base value. */
+  price: number;
+}
+
 export interface GameState {
   version: number;
   meta: { seed: number; created: string; playedPhases: number };
@@ -78,10 +92,15 @@ export interface GameState {
   time: { day: number; phase: Phase };
   where: { map: string; x: number; facing: 'left' | 'right' };
   town: {
+    /** Completed facilities (the four fixed ones plus what was built). */
     facilities: string[];
-    buildQueue: { facility: string; daysLeft: number }[];
+    buildQueue: { facility: string; slot: string; daysLeft: number }[];
+    /** Map slot id -> facility built there. */
+    slots: Record<string, string>;
     resources: Record<Resource, number>;
     storage: Record<string, number>;
+    /** This week's shelves at the general store (rolled by town.ts; missing in older saves). */
+    store?: { week: number; offers: StoreOffer[] };
   };
   villagers: Record<string, VillagerState>;
   quests: Record<string, QuestState>;
@@ -89,6 +108,12 @@ export interface GameState {
   choicesMade: string[];
   world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[] };
   scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
+  /** Companions travelling with you (up to 2). Chosen properly in Phase 7; the debug panel sets it until then. */
+  party: string[];
+  /** The fight in progress, or null. Never persisted across a save. */
+  battle: BattleState | null;
+  /** Messages that arrived overnight (messenger warnings, completed buildings), shown after sleeping. */
+  notices: string[];
   log: string[];
   rng: number;
 }
@@ -113,7 +138,10 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
   const startMap = opts.startMap ?? (content.maps.withergate ? 'withergate' : Object.keys(content.maps)[0] ?? 'withergate');
   const map = content.maps[startMap];
   const spawn = map ? mapEntities(map, 'spawn').find((s) => s.id === (opts.startSpawn ?? 'default')) ?? mapEntities(map, 'spawn')[0] : undefined;
-  const startingWeapon = Object.values(content.weapons).find((w) => w.source?.starting)?.id ?? null;
+  const startingWeapons = Object.values(content.weapons)
+    .filter((w) => w.source?.starting)
+    .map((w) => w.id);
+  const startingWeapon = startingWeapons[0] ?? null;
   const prog = content.progression;
 
   const state: GameState = {
@@ -130,6 +158,7 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
       grace: prog.grace.base + prog.grace.per_divinity * prog.base.divinity,
       energy: prog.energy.player_max,
       weaponId: startingWeapon,
+      weapons: startingWeapons,
       powers: [],
       equippedPowers: [],
       skillPoints: 0,
@@ -144,9 +173,11 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     town: {
       facilities: [...FIXED_FACILITIES],
       buildQueue: [],
+      slots: {},
       resources: { ...(Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>), gold: 50, wood: 20 },
       // DEV DEFAULT: two sample gifts so the gift menu can be tested before storage exists.
       storage: { whetstone: 1, hearty_stew: 1 },
+      store: { week: 0, offers: [] },
     },
     villagers: {},
     quests: {},
@@ -154,10 +185,95 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     choicesMade: [],
     world: { corruption: 1, relations: {}, unlockedMaps: [] },
     scheduleOverrides: {},
+    party: [],
+    battle: null,
+    notices: [],
     log: [],
     rng: seed >>> 0,
   };
   return state;
+}
+
+/** Numeric bonuses granted by completed facilities (their `effects` lists). */
+export interface TownBonuses {
+  resource_income: Partial<Record<Resource, number>>;
+  store_rates: number;
+  energy_max: number;
+  recovery_speed: number;
+  caravan_safety: number;
+  preview_nodes: number;
+  incursion_defense: number;
+  faith_gain: number;
+  tavern_quality: number;
+  actions: string[];
+}
+
+export function townBonuses(state: GameState, content: ContentBundle): TownBonuses {
+  const t: TownBonuses = {
+    resource_income: {},
+    store_rates: 0,
+    energy_max: 0,
+    recovery_speed: 0,
+    caravan_safety: 0,
+    preview_nodes: 0,
+    incursion_defense: 0,
+    faith_gain: 0,
+    tavern_quality: 0,
+    actions: [],
+  };
+  const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback);
+  for (const id of state.town.facilities) {
+    for (const e of content.facilities[id]?.effects ?? []) {
+      switch (e.type) {
+        case 'resource_income': {
+          const r = e.resource as Resource;
+          t.resource_income[r] = (t.resource_income[r] ?? 0) + num(e.amount);
+          break;
+        }
+        case 'store_rates': t.store_rates += num(e.percent); break;
+        case 'energy_max': t.energy_max += num(e.amount); break;
+        case 'recovery_speed': t.recovery_speed += num(e.days); break;
+        case 'caravan_safety': t.caravan_safety += num(e.percent); break;
+        case 'preview_nodes': t.preview_nodes += num(e.columns); break;
+        case 'incursion_defense': t.incursion_defense += num(e.amount); break;
+        case 'faith_gain': t.faith_gain += num(e.percent); break;
+        case 'tavern_quality': t.tavern_quality += num(e.amount); break;
+        case 'unlock_action': if (typeof e.action === 'string') t.actions.push(e.action); break;
+        default: break;
+      }
+    }
+  }
+  return t;
+}
+
+export interface CombatStats {
+  attack: number;
+  defense: number;
+  speed: number;
+  divinity: number;
+}
+
+/** Attack / Defense / Speed / Divinity from level and the current leaning's growth. */
+export function combatStats(state: GameState, content: ContentBundle): CombatStats {
+  const p = content.progression;
+  const lvl = state.player.level - 1;
+  const lean = domainLean(state);
+  const g = lean === 'none' ? {} : (p.lean_growth[lean] ?? {});
+  return {
+    attack: p.base.attack + (p.per_level.attack + (g.attack ?? 0)) * lvl,
+    defense: p.base.defense + (p.per_level.defense + (g.defense ?? 0)) * lvl,
+    speed: p.base.speed + (p.per_level.speed + (g.speed ?? 0)) * lvl,
+    divinity: p.base.divinity + (p.per_level.divinity + (g.divinity ?? 0)) * lvl,
+  };
+}
+
+/** Why an expedition cannot start right now, or null when it can. */
+export function expeditionBlocker(state: GameState): string | null {
+  const tags = activeTags(state);
+  const blocking = TAGS_BLOCKING_EXPEDITIONS.find((t) => tags.includes(t));
+  if (blocking) return `You are ${blocking}. Sleep it off first.`;
+  if (state.player.energy <= 0) return 'You are too exhausted to travel.';
+  return null;
 }
 
 export function villagerState(state: GameState, content: ContentBundle, id: string): VillagerState {
@@ -234,7 +350,7 @@ export function maxGrace(state: GameState, content: ContentBundle): number {
 }
 
 export function maxEnergy(state: GameState, content: ContentBundle): number {
-  return content.progression.energy.player_max;
+  return content.progression.energy.player_max + townBonuses(state, content).energy_max;
 }
 
 export function residents(state: GameState): string[] {

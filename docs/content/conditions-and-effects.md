@@ -105,6 +105,7 @@ An effects block is a mapping; every key is optional and all present keys apply 
 | Key | Example | Meaning |
 |---|---|---|
 | `friendship` | `friendship: +5` · `friendship: { mara: +5, tobin: -3 }` | growth multipliers apply to positive values |
+| `friendship_residents` | `friendship_residents: +2` | every current resident of Withergate |
 | `romance` | `romance: +3` | ignored for non-romanceable characters |
 | `set_tier` | `set_tier: { tobin: enemy }` | rare, for story moments |
 | `introduce` | `introduce: [tobin]` | marks met and applies start bonuses |
@@ -119,6 +120,8 @@ An effects block is a mapping; every key is optional and all present keys apply 
 | `hp` / `energy` / `grace` | `hp: -5` |
 | `domain_points` | `domain_points: { discovery: +2 }` |
 | `faith` | `faith: +1` (points toward the next faith level) |
+| `skill_points` | `skill_points: +1` |
+| `weapons` | `weapons: [pilgrim_staff]` (added to what the player owns) |
 | `unlock_power` | `unlock_power: verdant_grasp` |
 | `stat_check_bonus` | `stat_check_bonus: { stat: charisma, amount: 2, until: day_end }` |
 

@@ -1,4 +1,4 @@
-import { DOMAIN_LABELS, resolveCheck, substituteText } from '@withergate/shared';
+import { DOMAIN_LABELS, resolveCheck, substituteText, tagCheckBonus } from '@withergate/shared';
 import type {
   BattleStep,
   CheckResult,
@@ -14,7 +14,7 @@ import type {
 import { evaluate } from '../conditions';
 import type { Ctx } from '../ctx';
 import { applyEffects } from '../effects';
-import { domainLean } from '../state';
+import { activeTags, domainLean } from '../state';
 
 export type InterpreterOutput =
   | { type: 'line'; step: LineStep; text: string }
@@ -124,8 +124,9 @@ export class Interpreter {
   }
 
   private roll(stat: Stat, dc: number): CheckResult {
-    const bonus = Number(this.ctx.state.flags[`bonus:${stat}`] ?? 0);
-    return resolveCheck(this.ctx.rng.d20(), this.ctx.state.player.stats[stat], this.ctx.state.player.stats.luck, dc, bonus);
+    const state = this.ctx.state;
+    const bonus = Number(state.flags[`bonus:${stat}`] ?? 0) + tagCheckBonus(activeTags(state), stat);
+    return resolveCheck(this.ctx.rng.d20(), state.player.stats[stat], state.player.stats.luck, dc, bonus);
   }
 
   private branchFor(

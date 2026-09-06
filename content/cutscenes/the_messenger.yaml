@@ -1,0 +1,28 @@
+# The King's messenger arrives after the first fight and leads you to Withergate.
+id: the_messenger
+stage:
+  map: landing_glade
+  place: { player: fight_spot, messenger: path_east }
+script:
+  - move: { who: messenger, to: glade_center_right, speed: run, wait: true }
+  - face: { who: player, toward: messenger }
+  - messenger: "[PLACEHOLDER: You. You're the one who fell. The whole sky lit up; they saw it from the walls of Aboridge.]"
+  - messenger: "[PLACEHOLDER: The King sends his regards, and a proposition. There is a plot of land called Withergate on the brink of what people call Hell. He would like someone to live in it.]"
+  - choice:
+      - text: "Why me?"
+        effects: { flags: { messenger_asked_why: true } }
+        then:
+          - messenger: "[PLACEHOLDER: Because you fell out of the sky and lived, and because nobody else will go.]"
+      - text: "What is in it for me?"
+        effects: { domain_points: { prosperity: 1 } }
+        then:
+          - messenger: "[PLACEHOLDER: It would be entirely your domain. Do with it as you please. Build. Rule. Be worshipped, if you can manage it.]"
+      - text: "[Say nothing. Let him sweat.]"
+        effects: { tags: [scary], domain_points: { combat: 1 } }
+        then:
+          - messenger: "[PLACEHOLDER: ...Right. The, ah, land. It is yours. Entirely. Please follow me.]"
+  - messenger: "[PLACEHOLDER: It is two days east on foot. I know a shorter way. Come.]"
+  - effects: { flags: { messenger_heard: true }, unlock_map: withergate }
+  - fade: out
+  - effects: { time: 2, teleport: { map: withergate, spawn: from_east_road } }
+  - end: scene

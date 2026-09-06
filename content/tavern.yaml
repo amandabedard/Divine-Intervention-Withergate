@@ -1,0 +1,24 @@
+# SAMPLE tavern activities. Each is a menu entry in the tavern; requires/effects/script use the shared grammar.
+activities:
+  - id: drink
+    label: "Have a drink"
+    description: "Two gold. The evening gets warmer and the morning gets worse."
+    requires: { time: [evening, night] }
+    gold: 2
+    effects: { temp_tags: { drunk: 2 }, domain_points: { pleasure: 1 } }
+    script:
+      - narrate: "[PLACEHOLDER: The tavern keeper pours something the colour of old honey. It goes down like a decision you will regret.]"
+  - id: gathering
+    label: "Gather the residents"
+    description: "Spend the evening with everyone who lives here."
+    requires: { time: evening, residents_min: 1 }
+    cost: phase
+    effects: { friendship_residents: 2, domain_points: { friendship: 1 } }
+    script:
+      - narrate: "[PLACEHOLDER: Chairs scrape, someone finds a fiddle, and for an evening Withergate sounds like a town.]"
+  - id: listen
+    label: "Listen to the room"
+    description: "Sit with a cup and hear what people say when they think a god is not listening."
+    once_per_day: true
+    script:
+      - narrate: "[PLACEHOLDER: Rumours. The road east is bad again. Somebody's cousin in Heathel saw the sky go wrong.]"

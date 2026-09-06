@@ -2,7 +2,7 @@
 
 A browser app that lives in `tools/editor/`, runs locally with `npm run editor` (http://localhost:5174), and writes straight into the repo: assets into `assets/<kind>/`, maps into `content/maps/`. It shares its types and schemas with the game, so anything it saves is guaranteed to load.
 
-**Status (2026-09-06): MVP built.** Working: asset upload by drop or button (props, tiles, backgrounds, ui, icons), usage tracking, delete guard, prune-unused to `assets/_unused/`, placeholder blocks, place/move/erase/resize with snap, collision rectangles, all entity types with property editors and pickers, map settings and background layers, undo/redo, validated save with line-level issues, "Play here" (opens the game at `?map=<id>&spawn=<id>`). Not yet: sprite-sheet slicing on upload (character sets are packed by `npm run build:sprites` instead), hot reload of the game when a map is saved from the editor (the game's content plugin does pick up the change, but the running scene only reloads on the next map switch), coverage of spots referenced by schedules.
+**Status (2026-09-07): MVP built, asset packs in.** Working: asset upload by drop or button (props, tiles, backgrounds, ui, icons), **sheet import** (one image holding many props or tiles is cut into separate assets, with a preview of the cuts), packs with search and filters, usage tracking, delete guard, prune-unused per pack to `assets/_unused/`, placeholder blocks, place/move/erase/resize with snap, collision rectangles, all entity types with property editors and pickers, map settings and background layers, a scrollable canvas with map-edge resizing, undo/redo, validated save with line-level issues, "Play here" (opens the game at `?map=<id>&spawn=<id>`). Not yet: hot reload of the game when a map is saved from the editor (the game's content plugin does pick up the change, but the running scene only reloads on the next map switch), coverage of spots referenced by schedules.
 
 ## Goals
 
@@ -16,25 +16,43 @@ A browser app that lives in `tools/editor/`, runs locally with `npm run editor` 
 ```
 ┌────────────┬──────────────────────────────────────────┬──────────────┐
 │ Assets     │ Canvas                                   │ Properties   │
-│ ─────────  │ pan (space+drag / middle mouse)          │ ───────────  │
-│ [upload]   │ zoom (wheel)                             │ selected     │
-│ search     │ grid + snap toggle                       │ object or    │
-│ kind tabs  │ layer visibility / lock                  │ entity       │
-│ thumbnails │                                          │ fields       │
-│ usage ●    │ tools: select · place · erase ·          │              │
-│            │        collision · entity · measure      │ map settings │
-│ [generate  │                                          │ layers       │
-│  placeholder]                                         │ [save] [play]│
+│ ─────────  │ scrollbars / wheel / Shift+wheel to move │ ───────────  │
+│ kind tabs  │ Ctrl+wheel to zoom at the cursor         │ selected     │
+│ search     │ Space+drag or middle mouse to pan        │ object or    │
+│ pack ▾     │ drag the map's right/bottom edge to      │ entity       │
+│ [upload]   │   resize it; +640 buttons widen it       │ fields       │
+│ [import    │ grid + snap toggle                       │              │
+│  sheet…]   │ tools: select · place · erase ·          │ map settings │
+│ thumbnails │        collision · entity                │ (widen left/ │
+│ details    │                                          │  right)      │
+│ [prune]    │                                          │ [save] [play]│
 └────────────┴──────────────────────────────────────────┴──────────────┘
 ```
 
-Keyboard: `V` select, `B` place, `E` erase, `C` collision, `N` entity, `G` grid snap, `Ctrl+Z/Y` undo/redo, `Ctrl+S` save, `Del` delete, arrows nudge, `Shift` = 10px nudge, `H` flip horizontal, `[` `]` z-order.
+Keyboard: `V` select, `B` place, `E` erase, `C` collision, `N` entity, `G` grid snap, `Ctrl+Z/Y` undo/redo, `Ctrl+S` save, `Del` delete, arrows nudge the selection (`Shift` = 10px) or scroll the view when nothing is selected, `Home` fits the whole map in view.
+
+**Building out the sides.** The view scrolls well past the map's edges, so you can see where the map ends. To make the map bigger, drag its right or bottom edge on the canvas, use the **⇐ +640 / +640 ⇒** buttons in the status bar, or **widen left / widen right / taller** in Map settings. Widening to the left shifts everything already placed to the right, so nothing moves in the world.
 
 ## Asset library
 
 Kinds: `tile`, `prop`, `background`, `character`, `portrait`, `enemy`, `ui`, `icon`, `audio`.
 
 Upload flow: drop files → pick kind → for character sets, drop the whole frame folder (a preview animates) → optional tags and credit → saved under `assets/<kind>/` and added to the manifest with a stable `id`.
+
+**Packs.** Library pieces arrive in packs (one folder per pack under `assets/props|tiles|backgrounds/`), each piece tagged with its pack, with a `credit`, a `pixel` flag (pixel art is drawn without smoothing in the editor and the game; cartoon art is smoothed) and a `source` that remembers the original file, so importing the same thing twice is harmless. `assets/README.md` lists the packs and where they came from. Two ways in:
+
+- **Ready-made files** (craftpix-style packs, one PNG per piece): `node tools/scripts/import-folder.mjs --pack village --credit craftpix.net <folder>` copies every PNG, kind by subfolder (`Background` → background, `Platformer`/`Tiles`/`Ground` → tile, anything else → prop), subfolder as a tag, file name as the id (`Building - Wall A 02.png` → `prop_village_wall_a_02`). Previews and Mac junk are skipped; add `--pixel` for pixel-art packs.
+- **Sheets** (one image holding many pieces): **Import sheet…** in the panel, or `node tools/scripts/import-sheets.mjs --pack <id> --mode <m> <pngs or folder>`. The sheet type decides the cut: `objects` for pieces spaced out on a transparent background (every cluster of pixels is one prop, best for object sheets), `grid` for a tileset (every non-empty cell is a tile, identical cells once; set the grid to the tile size), and `auto` for packed 96px-grid sheets where props touch and texture blocks are cut where the texture changes and then into single cells. Preview the cuts first. Re-importing a sheet keeps the pieces already in the library and, with `--prune-stale` (the dialog always does this), drops pieces of the old cut that no map uses. The original sheet is kept under `assets/_sheets/<pack>/` (not committed).
+
+```
+node tools/scripts/import-folder.mjs --pack farm --credit craftpix.net "C:/.../cartoon-medieval-farm/PNG"
+node tools/scripts/import-sheets.mjs --pack farm_topdown --mode objects --layout 16 --min-size 5 Houses.png Plants.png
+node tools/scripts/import-sheets.mjs --pack farm_topdown --mode grid --layout 16 ground_grass_bricks.png
+node tools/scripts/import-sheets.mjs --pack town --dry --debug out/ town/*.png     # report + outlined previews, no writes
+node tools/scripts/remove-pack.mjs --strip-maps town gothic                        # drop packs, their files, and the placements that used them
+```
+
+In the panel, filter by kind and pack or search ids and tags; click a thumbnail to place it; the details box under the grid renames, retags, flags or deletes the selected asset. **prune** moves the unused pieces of the selected pack (or, with no pack selected, unused assets outside any pack) to `assets/_unused/`. The game only loads the pieces that maps actually use, so a big library costs nothing at runtime.
 
 Conventions for character art, matching how the first sets were delivered, so the game finds animations without configuration:
 
@@ -48,7 +66,15 @@ assets/enemies/<set>_sprites/idle1.png | attack1.png | hurt1.png | die1.png
 
 `npm run build:sprites` trims each set to its union bounding box and packs the named frames into one atlas per set under `game/public/generated/`; numbered exports (`frame_0000.png`) are ignored. Both the game and the editor read the atlases.
 
-Manifest entry (one per set):
+Manifest entry for an imported piece:
+
+```json
+{ "id": "prop_town_s1_01", "kind": "prop", "file": "props/town/s1_01.png", "w": 192, "h": 192,
+  "tags": ["town"], "placeholder": false, "pack": "town", "pixel": true,
+  "source": { "sheet": "town/1.png", "x": 0, "y": 0 } }
+```
+
+Manifest entry for a character set (one per set):
 
 ```json
 {
@@ -92,7 +118,7 @@ Entity types and their properties:
 | `spawn` | id, x, y, facing | where the player appears when arriving |
 | `exit` | id, rect, direction (left/right/up/down/door), to: { map, spawn }, requires? | arrows appear near it; door exits show `!` |
 | `npc_spot` | id, x, y, facing | schedule targets and stage-direction targets |
-| `interactable` | id, rect, prompt icon, action: { kind: open_ui | run_script | forage | sign | facility, ... } | `!` above the player when near |
+| `interactable` | id, rect, prompt icon, action: { kind: open_ui | run_script | forage | sign | facility, ... } | `!` above the player when near. `open_ui` targets: bed, quarters, living_quarters, general_store, tavern, build, shrine, notice_board |
 | `trigger` | id, rect, once, action: { run_script | start_event | effects } | invisible zones |
 | `facility_slot` | id, x, y, size | Withergate build slots; shows the placeholder or the built facility |
 | `camera_bounds` | rect | optional clamp |
@@ -148,14 +174,15 @@ POST   /api/maps                  create { id, name?, width?, height?, interior?
 DELETE /api/maps/:id
 GET    /api/assets                manifest + usage
 POST   /api/assets                upload { name, kind, dataUrl, w, h, tags?, placeholder? }
+POST   /api/assets/sheet          cut a sheet { name, pack, dataUrl, options?, dryRun? } into assets (tools/scripts/lib/sheet.mjs)
 PATCH  /api/assets/:id            tags / placeholder flag / credit / rename id (rewrites map references)
 DELETE /api/assets/:id            409 while any map uses it
-POST   /api/assets/prune          move unused files to assets/_unused/
+POST   /api/assets/prune          move unused files of { pack } (or outside any pack) to assets/_unused/
 /art/*                            repo assets/ served statically (the game serves the same prefix in dev)
 /generated/*                      atlases and busts from game/public/generated
 ```
 
-Implementation: React with a plain `<canvas>` renderer (no canvas library); pointer events handle select, move, resize handles, rectangle drawing, pan and zoom. Undo/redo is a snapshot stack over the map JSON with coalescing for rapid edits of one field.
+Implementation: React with a plain `<canvas>` renderer (no canvas library); pointer events handle select, move, resize handles, rectangle drawing, pan and zoom. The canvas sits sticky inside a natively scrolling container whose spacer is the zoomed map plus margins, so scrollbars, wheel and trackpad scrolling come from the browser and the scroll offset is the pan. Undo/redo is a snapshot stack over the map JSON with coalescing for rapid edits of one field.
 
 ## Out of scope for v1
 

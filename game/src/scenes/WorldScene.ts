@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { mapEntities } from '@withergate/shared';
+import { WALK_LINE_OFFSET, mapEntities } from '@withergate/shared';
 import type { EntityOf, GameMap, StageStep } from '@withergate/shared';
 import { bus } from '../bridge/bus';
 import type { EnterWorldData } from '../bridge/bus';
 import { store } from '../bridge/store';
 import { charactersOn } from '../core/schedule';
 import { session } from '../core/session';
+import { applyPixelFilters, assetsUsedByMap, queueAssets, textureKey } from './assets';
 import {
   DEPTH,
   drawGround,
@@ -34,6 +35,17 @@ const TALK_RANGE = 110;
 
 const EXIT_ARROWS: Record<EntityOf<'exit'>['direction'], string> = { left: '←', right: '→', up: '↑', down: '↓', door: '↑' };
 
+const FACILITY_COLORS: Record<string, string> = {
+  barracks: '#6a4a4a',
+  farm: '#6a7a3a',
+  library: '#4a5a7a',
+  town_hall: '#7a6a3a',
+  bazaar: '#8a5a7a',
+  hospital: '#5a7a7a',
+  inn: '#7a5a3a',
+  restaurant: '#8a6a4a',
+};
+
 function isAutoExit(exit: EntityOf<'exit'>): boolean {
   return exit.auto ?? (exit.direction === 'left' || exit.direction === 'right');
 }
@@ -57,9 +69,17 @@ export class WorldScene extends Phaser.Scene {
   private tintRect!: Phaser.GameObjects.Rectangle;
   private exits: EntityOf<'exit'>[] = [];
   private interactables: EntityOf<'interactable'>[] = [];
+  private triggers: EntityOf<'trigger'>[] = [];
   private justArrived = true;
   private unsubscribe: (() => void)[] = [];
   private transitioning = false;
+  /** The y characters' feet stand on: a little below the ground line. */
+  private walkY = 0;
+  /** World interactions are ignored until this time, so a key that closed a menu is not replayed. */
+  private uiBlockedUntil = 0;
+  private padPrevA = false;
+  /** Assets that failed to load once; not retried, so a bad file cannot restart the scene forever. */
+  private static failedAssets = new Set<string>();
 
   constructor() {
     super('world');
@@ -77,7 +97,19 @@ export class WorldScene extends Phaser.Scene {
       this.add.text(640, 360, 'No maps in content/maps yet.', { fontSize: '24px', color: '#fff' }).setOrigin(0.5);
       return;
     }
+    // Art placed on this map since boot (or added from the editor) is loaded now, then the scene restarts.
+    const missing = assetsUsedByMap(map).filter((id) => !this.textures.exists(textureKey(id)) && !WorldScene.failedAssets.has(id));
+    if (missing.length && queueAssets(this, store.manifest, missing) > 0) {
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        applyPixelFilters(this, store.manifest);
+        for (const id of missing) if (!this.textures.exists(textureKey(id))) WorldScene.failedAssets.add(id);
+        this.scene.restart(this.enter);
+      });
+      this.load.start();
+      return;
+    }
     this.map = map;
+    this.walkY = map.ground_y + WALK_LINE_OFFSET;
     this.transitioning = false;
     this.justArrived = true;
     this.npcs = [];
@@ -106,9 +138,40 @@ export class WorldScene extends Phaser.Scene {
     for (const p of map.layers.decor) drawPlacement(this, p, p.y + (p.h ?? 0));
     for (const p of map.layers.foreground) drawPlacement(this, p, DEPTH.foreground);
 
-    for (const slot of mapEntities(map, 'facility_slot')) drawSlot(this, slot.x, slot.y, slot.size, slot.id);
-    this.interactables = mapEntities(map, 'interactable');
+    this.interactables = [...mapEntities(map, 'interactable')];
     for (const it of this.interactables) drawInteractable(this, it.x, it.y, it.w, it.h, it.label ?? it.id);
+    // Build slots: an empty dashed outline, a construction notice, or the finished facility.
+    // Each one is also something the player can walk up to and use.
+    for (const slot of mapEntities(map, 'facility_slot')) {
+      const w = slot.size === 'large' ? 320 : 200;
+      const h = slot.size === 'large' ? 240 : 160;
+      const built = state.town.slots[slot.id];
+      const building = state.town.buildQueue.find((b) => b.slot === slot.id);
+      if (built) {
+        const facility = content.facilities[built];
+        drawPlacement(
+          this,
+          { asset: 'placeholder', x: slot.x - w / 2, y: slot.y - h, w, h, color: FACILITY_COLORS[built] ?? '#7a6a5a', label: facility?.name ?? built },
+          DEPTH.midground,
+        );
+      } else if (building) {
+        const name = content.facilities[building.facility]?.name ?? building.facility;
+        drawSlot(this, slot.x, slot.y, slot.size, `${name}\nunder construction\n${building.daysLeft} day${building.daysLeft === 1 ? '' : 's'} left`);
+      } else {
+        drawSlot(this, slot.x, slot.y, slot.size, `Build slot\n${slot.id}`);
+      }
+      this.interactables.push({
+        type: 'interactable',
+        id: `slot:${slot.id}`,
+        x: slot.x - w / 2,
+        y: slot.y - h,
+        w,
+        h,
+        label: built ? (content.facilities[built]?.name ?? built) : 'Build here',
+        action: { kind: 'facility', facility: slot.id },
+      });
+    }
+    this.triggers = mapEntities(map, 'trigger');
     this.exits = mapEntities(map, 'exit');
     for (const ex of this.exits) {
       if (ex.direction === 'door') drawInteractable(this, ex.x, ex.y, ex.w, ex.h, ex.label ?? 'Door');
@@ -134,7 +197,7 @@ export class WorldScene extends Phaser.Scene {
     const startX = this.enter.x ?? spawn?.x ?? 200;
     const facing = this.enter.facing ?? spawn?.facing ?? 'right';
     const playerSet = this.pickPlayerSet(state.player.form);
-    this.player = this.makeActor('player', playerSet, startX, map.ground_y, facing, state.player.name);
+    this.player = this.makeActor('player', playerSet, startX, this.walkY, facing, state.player.name);
     state.where.map = map.id;
     state.where.x = startX;
     state.where.facing = facing;
@@ -185,6 +248,9 @@ export class WorldScene extends Phaser.Scene {
       }),
       bus.on('npc.refresh', () => this.placeNpcs()),
       bus.on('stage', ({ step, done }) => this.performStage(step, done)),
+      bus.on('battle.start', () => this.scene.pause()),
+      bus.on('battle.end', () => this.scene.resume()),
+      bus.on('town.changed', () => this.switchMap({ map: this.map.id, x: this.player.obj.x, facing: this.player.facing })),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribe.forEach((u) => u());
@@ -204,14 +270,16 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private makeActor(id: string, set: string | null, x: number, y: number, facing: 'left' | 'right', name: string): Actor {
+    // The player always draws in front of NPCs standing on the same line.
+    const depth = id === 'player' ? y + 1 : y;
     if (set && this.textures.exists(`sprite:${set}`)) {
       const info = store.assets.sprites[set]!;
-      const sprite = this.add.sprite(x, y, `sprite:${set}`).setOrigin(0.5, info.originY).setScale(CHAR_SCALE).setDepth(y);
+      const sprite = this.add.sprite(x, y, `sprite:${set}`).setOrigin(0.5, info.originY).setScale(CHAR_SCALE).setDepth(depth);
       const actor: Actor = { id, obj: sprite, set, facing };
       this.setIdle(actor);
       return actor;
     }
-    const c = makePlaceholderCharacter(this, x, y, name).setDepth(y);
+    const c = makePlaceholderCharacter(this, x, y, name).setDepth(depth);
     return { id, obj: c, set: null, facing };
   }
 
@@ -251,9 +319,9 @@ export class WorldScene extends Phaser.Scene {
     for (const { id, at } of charactersOn(ctx, this.map.id)) {
       const profile = store.content.villagers[id]!.profile;
       const set = profile.sprite_set ?? id;
-      const actor = this.makeActor(id, store.assets.sprites[set] ? set : null, at.x, this.map.ground_y, at.facing, profile.name);
+      const actor = this.makeActor(id, store.assets.sprites[set] ? set : null, at.x, this.walkY, at.facing, profile.name);
       actor.bubble = makeBubble(this);
-      actor.bubble.setPosition(at.x, this.map.ground_y - this.actorHeight(actor) - 6);
+      actor.bubble.setPosition(at.x, this.walkY - this.actorHeight(actor) - 6);
       this.npcs.push(actor);
     }
   }
@@ -306,13 +374,13 @@ export class WorldScene extends Phaser.Scene {
         if (!actor && typeof a.who === 'string' && store.content.villagers[a.who]) {
           const profile = store.content.villagers[a.who]!.profile;
           const set = profile.sprite_set ?? a.who;
-          actor = this.makeActor(a.who, store.assets.sprites[set] ? set : null, x, this.map.ground_y, 'left', profile.name);
+          actor = this.makeActor(a.who, store.assets.sprites[set] ? set : null, x, this.walkY, 'left', profile.name);
           actor.bubble = makeBubble(this);
           this.npcs.push(actor);
         }
         if (actor) {
-          actor.obj.setPosition(x, this.map.ground_y);
-          actor.bubble?.setPosition(x, this.map.ground_y - this.actorHeight(actor) - 6);
+          actor.obj.setPosition(x, this.walkY);
+          actor.bubble?.setPosition(x, this.walkY - this.actorHeight(actor) - 6);
         }
         return done();
       }
@@ -326,7 +394,7 @@ export class WorldScene extends Phaser.Scene {
         const duration = (Math.abs(x - actor.obj.x) / speed) * 1000;
         const finish = () => {
           this.setIdle(actor);
-          actor.bubble?.setPosition(actor.obj.x, this.map.ground_y - this.actorHeight(actor) - 6);
+          actor.bubble?.setPosition(actor.obj.x, this.walkY - this.actorHeight(actor) - 6);
           if (actor === this.player && store.state) store.state.where.x = actor.obj.x;
         };
         this.tweens.add({
@@ -359,7 +427,7 @@ export class WorldScene extends Phaser.Scene {
           const icon = String(a.icon);
           const glyph = icon === 'heart' ? '♥' : icon === 'anger' ? '💢' : icon === 'sweat' ? '💧' : icon === 'note' ? '♪' : icon === 'zzz' ? 'z' : icon;
           const t = this.add
-            .text(actor.obj.x, this.map.ground_y - this.actorHeight(actor) - 10, glyph, {
+            .text(actor.obj.x, this.walkY - this.actorHeight(actor) - 10, glyph, {
               fontFamily: 'Georgia, serif',
               fontSize: '36px',
               color: '#fff8e7',
@@ -412,28 +480,53 @@ export class WorldScene extends Phaser.Scene {
 
   // --- per frame --------------------------------------------------------------
 
+  /** First gamepad: horizontal direction, run modifier, and a fresh press of the confirm button. */
+  private readPad(): { dir: number; run: boolean; interact: boolean } {
+    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
+    const pad = pads[0];
+    if (!pad) {
+      this.padPrevA = false;
+      return { dir: 0, run: false, interact: false };
+    }
+    const x = pad.axes[0] ?? 0;
+    const left = x < -0.4 || !!pad.buttons[14]?.pressed;
+    const right = x > 0.4 || !!pad.buttons[15]?.pressed;
+    const a = !!pad.buttons[0]?.pressed;
+    const interact = a && !this.padPrevA;
+    this.padPrevA = a;
+    return { dir: (right ? 1 : 0) - (left ? 1 : 0), run: !!pad.buttons[2]?.pressed || (pad.buttons[7]?.value ?? 0) > 0.5, interact };
+  }
+
   override update(time: number, delta: number): void {
     const state = store.state;
     if (!state || !this.player || this.transitioning) return;
     const canAct = store.ui.mode === 'world';
     const p = this.player;
 
+    // Read the interact keys every frame, even while a menu is open, so the press that
+    // closed the menu is consumed here instead of being replayed as a world interaction.
+    const jE = Phaser.Input.Keyboard.JustDown(this.keys.E);
+    const jEnter = Phaser.Input.Keyboard.JustDown(this.keys.ENTER);
+    const jSpace = Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+    const pad = this.readPad();
+    const pressed = jE || jEnter || jSpace || pad.interact;
+
     let dir = 0;
     if (canAct) {
-      const left = this.cursors.left.isDown || this.keys.A.isDown;
-      const right = this.cursors.right.isDown || this.keys.D.isDown;
+      const left = this.cursors.left.isDown || this.keys.A.isDown || pad.dir < 0;
+      const right = this.cursors.right.isDown || this.keys.D.isDown || pad.dir > 0;
       dir = (right ? 1 : 0) - (left ? 1 : 0);
     }
     if (dir !== 0) {
       p.facing = dir < 0 ? 'left' : 'right';
-      const speed = (this.keys.SHIFT.isDown ? RUN_SPEED : WALK_SPEED) * (delta / 1000);
+      const speed = (this.keys.SHIFT.isDown || pad.run ? RUN_SPEED : WALK_SPEED) * (delta / 1000);
       const nx = Phaser.Math.Clamp(p.obj.x + dir * speed, 40, this.map.size.width - 40);
       if (!this.blocked(nx)) p.obj.x = nx;
       this.setWalking(p);
     } else if (p.obj instanceof Phaser.GameObjects.Sprite && p.obj.anims.isPlaying) {
       this.setIdle(p);
     }
-    p.obj.setDepth(p.obj.y);
+    p.obj.setDepth(p.obj.y + 1);
     state.where.x = p.obj.x;
     state.where.facing = p.facing;
 
@@ -455,7 +548,7 @@ export class WorldScene extends Phaser.Scene {
 
     if (nearest && canAct) nearest.bubble?.setVisible(true);
     const bob = Math.sin(time / 180) * 4;
-    const headY = this.map.ground_y - this.actorHeight(p) - 6 + bob;
+    const headY = this.walkY - this.actorHeight(p) - 6 + bob;
     if (canAct && inter && !nearest) {
       this.prompt.setText('!').setPosition(px, headY).setVisible(true);
     } else if (canAct && exit && !nearest && !isAutoExit(exit)) {
@@ -464,17 +557,20 @@ export class WorldScene extends Phaser.Scene {
       this.prompt.setVisible(false);
     }
 
-    if (!canAct) return;
+    if (!canAct) {
+      this.uiBlockedUntil = time + 250;
+      return;
+    }
+    if (time < this.uiBlockedUntil) return;
 
     if (exit && !this.justArrived && isAutoExit(exit)) {
       if (session.useExit(exit)) this.transitioning = true;
       return;
     }
 
-    const pressed =
-      Phaser.Input.Keyboard.JustDown(this.keys.E) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.ENTER) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+    const trigger = this.triggers.find((t) => px >= t.x && px <= t.x + t.w);
+    if (trigger && session.fireTrigger(trigger)) return;
+
     if (!pressed) return;
     if (nearest) {
       const npc = nearest;
@@ -489,7 +585,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private blocked(nx: number): boolean {
-    const feet = this.map.ground_y;
+    const feet = this.walkY;
     for (const r of this.map.collision) {
       if (r.y > feet || r.y + r.h < feet - 40) continue;
       if (nx + 18 > r.x && nx - 18 < r.x + r.w) return true;

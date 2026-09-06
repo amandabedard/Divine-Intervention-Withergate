@@ -92,6 +92,8 @@ export const ProfileSchema = z
     profession: z.enum(PROFESSIONS),
     home_town: z.enum(HOME_TOWNS),
     romanceable: z.boolean(),
+    /** Special characters (the king, story figures) the corruption can never claim. */
+    protected: z.boolean().default(false),
     portrait_set: ID.optional(),
     sprite_set: ID.optional(),
     bio: z.string(),
@@ -121,6 +123,8 @@ export const ProfileSchema = z
       })
       .optional(),
     energy: z.number().int().min(1).optional(),
+    /** Resources or gift items this character makes more likely to appear at the general store while they live in Withergate (weight added to economy.yaml → stock.weights). */
+    store: z.record(ID, z.number().positive()).optional(),
     /** Days before they can travel again after a death on the road. */
     recovery_days: z.number().int().min(0).default(5),
     benefits: z

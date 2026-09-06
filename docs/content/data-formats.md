@@ -85,12 +85,12 @@ xp: 12
 loot: { food: 2 }                     # into the haul
 gift_drop: { item: wolf_fang, chance: 0.1 }
 tags_on_kill: []                      # e.g. [ruthless] for a creature that could be spared
-spare: { possible: true, check: { stat: charisma, dc: 12 }, tags: [merciful], xp: 8 }
+spare: { check: { stat: charisma, dc: 12 }, items: { hollow_fang: 1 }, tags: [merciful] }
 appears: { biomes: [forest, corrupted], time: [evening, night], corruption_min: 0 }
 tier: regular                         # regular | elite | boss
 ```
 
-Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts.
+A move with `power` attacks; a move with `effect` applies a status (buffs `attack_up` / `defense_up` / `inspired` go on the enemy itself, everything else on the player); a move can do both. In a move's `when`, `hp_below` means the enemy's own HP fraction. `spare` is optional: leave it out (or set `possible: false`) and the enemy can never be spared; otherwise `check` (default Charisma, DC 12, Divinity/2 is added automatically), `items` (what sparing pays, instead of XP) and `tags`. Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts (bosses arrive with the story systems).
 
 ---
 
@@ -154,6 +154,26 @@ powers:
     tier: 1
     kind: travel
     effect: { type: preview_nodes, columns: 1 }
+  - id: mending_light
+    name: Mending Light
+    domain: friendship
+    tier: 1
+    kind: combat
+    cost: 5
+    target: self
+    heal: 10                           # restores heal + Divinity/2
+  - id: shield_bash
+    name: Shield Bash
+    kind: companion                    # a companion's once-per-battle skill; referenced from a villager's benefits.combat active entry
+    target: enemy
+    power: 0.8
+    damage_type: blunt
+    effect: { status: stagger, turns: 1 }
+```
+
+Combat powers may carry `power` (damage), `heal`, and `effect: { status, turns }` in any combination; `cost` is Grace. Companion skills cost nothing and use the player's Attack.
+
+```yaml
   - id: mara_cleave
     name: Cleave
     kind: companion                    # one use per battle, granted by a villager benefit
@@ -198,6 +218,45 @@ Proposed roles for the eight optional facilities (Amanda edits):
 | Restaurant | Tavern quality, energy max, food-based buffs before expeditions | Chef |
 
 Fixed facilities (`your_quarters`, `living_quarters`, `general_store`, `tavern`) are in the same file with `fixed: true` and `cost: {}`.
+
+Effects the game applies today: `resource_income` (resource, amount per day), `store_rates` (percent off buys), `energy_max` (amount), `recovery_speed` (days), `caravan_safety` (percent), `preview_nodes` (columns), `incursion_defense` (amount), `faith_gain` (percent), `tavern_quality` (amount), `unlock_action` (action). Unknown types are kept and ignored.
+
+---
+
+## Economy and the tavern
+
+`content/economy.yaml`
+
+```yaml
+prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }   # base value of each resource, gold per unit
+sell_rate: 0.5                                                          # fraction of the base value paid when selling
+gifts: { whetstone: 8, hearty_stew: 5 }                                 # gift items the store can stock, base value each
+stock:                                                                  # the weekly shelves (decided H2)
+  offers: 5                        # different things on the shelves each week
+  markup: [1.2, 1.8]               # each offer is priced at base × a random markup in this range; never below base
+  units: { default: 10, ore: 5 }   # units of a resource in one offer
+  weights: { wood: 3, food: 3, whetstone: 1 }   # base chance of showing up (unlisted = 1); residents add theirs
+```
+
+The store is never a good deal: prices sit above the base value even with Bazaar and Socialite discounts, and change every week, so the best you get is a less bad week. Which things appear depends on who lives in Withergate: each villager's `store:` map in `profile.yaml` adds weight to the resources or gift items they make.
+
+`content/tavern.yaml` lists what you can do at the tavern. Each activity is a menu entry:
+
+```yaml
+activities:
+  - id: gathering
+    label: "Gather the residents"
+    description: "Spend the evening with everyone who lives here."
+    requires: { time: evening, residents_min: 1 }
+    gold: 0
+    cost: phase                         # none | phase
+    once_per_day: true
+    effects: { friendship_residents: 2, domain_points: { friendship: 1 } }
+    script:
+      - narrate: "Chairs scrape, someone finds a fiddle..."
+```
+
+`friendship_residents` is an effect that changes friendship with every current resident. Heart events and group scenes can be attached to activities through `script`.
 
 ---
 

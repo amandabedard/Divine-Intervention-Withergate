@@ -2,6 +2,7 @@ import { PHASES, nextPhase } from '@withergate/shared';
 import type { Ctx } from './ctx';
 import { checkQuests } from './quests';
 import { maxEnergy, maxHp, phaseAbs } from './state';
+import { checkResidents, completeBuilds, dailyIncome, rollStore, weekOf } from './town';
 
 export const PHASE_LABELS: Record<(typeof PHASES)[number], string> = {
   morning: 'Morning',
@@ -36,6 +37,7 @@ export function sleepUntilMorning(ctx: Ctx): void {
   ctx.state.player.hp = maxHp(ctx.state, ctx.content);
 }
 
+/** Everything that happens at first light: energy, recovery, construction, income, residents. */
 export function dailyTick(ctx: Ctx): void {
   const { state, content } = ctx;
   state.player.energy = maxEnergy(state, content);
@@ -45,22 +47,13 @@ export function dailyTick(ctx: Ctx): void {
     const max = content.villagers[id]?.profile.energy ?? 6;
     if (v.recoveryUntilDay > state.time.day) continue;
     v.energy = Math.min(max, v.energy + recovery);
-    if (v.unhappy) {
-      v.unhappy.daysLeft -= 1;
-      if (v.unhappy.daysLeft <= 0) {
-        v.gone = true;
-        v.resident = false;
-        ctx.notify(`${content.villagers[id]?.profile.name ?? id} has left Withergate for good.`);
-      }
-    }
   }
-  for (const build of [...state.town.buildQueue]) {
-    build.daysLeft -= 1;
-    if (build.daysLeft <= 0) {
-      state.town.buildQueue = state.town.buildQueue.filter((b) => b !== build);
-      if (!state.town.facilities.includes(build.facility)) state.town.facilities.push(build.facility);
-      ctx.notify(`${content.facilities[build.facility]?.name ?? build.facility} is complete.`);
-    }
+  completeBuilds(ctx);
+  dailyIncome(ctx);
+  checkResidents(ctx);
+  if (state.town.store && state.town.store.week !== weekOf(state.time.day)) {
+    rollStore(ctx);
+    state.notices.push('The general store has new stock and new prices this week.');
   }
   for (const key of Object.keys(state.flags)) {
     if (key.startsWith('bonus_until:') && state.flags[key] !== -1 && Number(state.flags[key]) < state.time.day) {

@@ -1,11 +1,16 @@
 import Phaser from 'phaser';
-import { EMPTY_INDEX, EMPTY_MANIFEST, IMAGE_ASSET_KINDS } from '@withergate/shared';
+import { EMPTY_INDEX, EMPTY_MANIFEST } from '@withergate/shared';
 import type { AssetManifest, GeneratedIndex } from '@withergate/shared';
 import { bus } from '../bridge/bus';
 import { store } from '../bridge/store';
 import { session } from '../core/session';
+import { applyPixelFilters, assetsToPreload, queueAssets } from './assets';
 
-/** Loads the generated asset index, the asset manifest and every image, then hands over to the UI. */
+/**
+ * Loads the generated asset index, the asset manifest and the images the maps
+ * use (the library holds thousands of pieces; a map loads the rest on demand),
+ * then hands over to the UI.
+ */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
@@ -15,6 +20,10 @@ export class BootScene extends Phaser.Scene {
     bus.on('world.enter', (data) => {
       if (this.scene.isActive('world')) return;
       this.scene.launch('world', data);
+    });
+    bus.on('battle.start', (data) => {
+      if (this.scene.isActive('battle')) return;
+      this.scene.launch('battle', data);
     });
 
     const fetchJson = <T>(url: string, fallback: T): Promise<T> =>
@@ -33,10 +42,9 @@ export class BootScene extends Phaser.Scene {
           frameHeight: info.frameHeight,
         });
       }
-      for (const a of manifest.assets) {
-        if (IMAGE_ASSET_KINDS.includes(a.kind)) this.load.image(`asset:${a.id}`, `/art/${a.file}`);
-      }
+      queueAssets(this, manifest, assetsToPreload(manifest, store.content.maps));
       this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        applyPixelFilters(this, manifest);
         for (const [set, info] of Object.entries(index.sprites)) {
           for (const [name, anim] of Object.entries(info.animations)) {
             const key = `${set}:${name}`;

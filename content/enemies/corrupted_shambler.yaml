@@ -1,0 +1,15 @@
+# SAMPLE enemy: something the corruption left walking.
+id: corrupted_shambler
+name: Corrupted Shambler
+description: "Something that used to be a person, walking the wrong way."
+stats: { hp: 40, attack: 8, defense: 4, speed: 3 }
+damage_type: corrupt
+resistances: { blade: 0.8, blunt: 1.0, pierce: 0.8, divine: 1.5 }
+moves:
+  - { id: claw, name: Claw, weight: 3, power: 1.0 }
+  - { id: black_ooze, name: Black Ooze, weight: 2, power: 0.6, effect: { status: bleed, turns: 2 } }
+  - { id: knit, name: Knit Flesh, weight: 2, effect: { status: defense_up, turns: 2 }, when: { hp_below: 0.5 } }
+xp: 20
+loot: { ore: 1 }
+spare: { possible: false }
+appears: { biomes: [corrupted], time: [afternoon, evening, night], corruption_min: 1 }

@@ -28,6 +28,7 @@ import type { Barks, GiftOverride, HeartEvent, Pool, Topic, VillagerBundle } fro
 import {
   BiomesFileSchema,
   CutsceneSchema,
+  EconomySchema,
   EncounterSchema,
   EnemySchema,
   FacilitiesFileSchema,
@@ -36,6 +37,7 @@ import {
   ProgressionSchema,
   QuestSchema,
   RegionsFileSchema,
+  TavernFileSchema,
   WeaponsFileSchema,
 } from '../world.ts';
 import type { Enemy, Quest } from '../world.ts';
@@ -402,6 +404,17 @@ export async function loadContent(opts: LoadOptions): Promise<LoadResult> {
   if (progression) bundle.progression = progression.data;
   else if (!files.includes('progression.yaml')) {
     issues.push({ level: 'warning', file: 'progression.yaml', message: 'missing; using built-in defaults' });
+  }
+  const economy = await single('economy.yaml', EconomySchema);
+  if (economy) bundle.economy = economy.data;
+  const tavern = await single('tavern.yaml', TavernFileSchema);
+  if (tavern) {
+    const ctx = mkCtx(tavern.pf, 'narrate');
+    bundle.tavern = tavern.data.activities.map((a, i) => ({
+      ...a,
+      effects: a.effects ? normalizeEffects(a.effects, ctx, ['activities', i, 'effects']) : undefined,
+      script: a.script ? normalizeScript(a.script, ctx, ['activities', i, 'script']) : undefined,
+    }));
   }
 
   // --- stats ---------------------------------------------------------------

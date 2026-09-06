@@ -11,5 +11,5 @@ moves:
 xp: 15
 loot: { gold: 6 }
 gift_drop: { item: gilded_ring, chance: 0.1 }
-spare: { possible: true, check: { stat: charisma, dc: 11 }, tags: [merciful], xp: 10 }
+spare: { possible: true, check: { stat: charisma, dc: 11 }, items: { gilded_ring: 1 }, tags: [merciful] }
 appears: { biomes: [plains, forest, hills], time: [morning, afternoon, evening] }

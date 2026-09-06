@@ -42,10 +42,12 @@ export function App() {
         case 'g': case 'G': editor.set({ snap: !editor.state.snap }); break;
         case 'Escape': editor.select(null); editor.set({ tool: 'select' }); break;
         case 'Delete': case 'Backspace': editor.deleteSelection(); break;
-        case 'ArrowLeft': editor.nudge(e.shiftKey ? -10 : -1, 0); e.preventDefault(); break;
-        case 'ArrowRight': editor.nudge(e.shiftKey ? 10 : 1, 0); e.preventDefault(); break;
-        case 'ArrowUp': editor.nudge(0, e.shiftKey ? -10 : -1); e.preventDefault(); break;
-        case 'ArrowDown': editor.nudge(0, e.shiftKey ? 10 : 1); e.preventDefault(); break;
+        // arrows nudge the selection; with nothing selected they scroll the view
+        case 'ArrowLeft': if (editor.state.selection) editor.nudge(e.shiftKey ? -10 : -1, 0); else editor.panBy(e.shiftKey ? -400 : -80, 0); e.preventDefault(); break;
+        case 'ArrowRight': if (editor.state.selection) editor.nudge(e.shiftKey ? 10 : 1, 0); else editor.panBy(e.shiftKey ? 400 : 80, 0); e.preventDefault(); break;
+        case 'ArrowUp': if (editor.state.selection) editor.nudge(0, e.shiftKey ? -10 : -1); else editor.panBy(0, e.shiftKey ? -400 : -80); e.preventDefault(); break;
+        case 'ArrowDown': if (editor.state.selection) editor.nudge(0, e.shiftKey ? 10 : 1); else editor.panBy(0, e.shiftKey ? 400 : 80); e.preventDefault(); break;
+        case 'Home': editor.fitMap(); e.preventDefault(); break;
         default: break;
       }
     };

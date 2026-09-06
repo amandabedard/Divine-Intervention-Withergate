@@ -38,6 +38,24 @@ powers:
     tier: 1
     kind: travel
     effect: { type: preview_nodes, columns: 1 }
+  - id: mending_light
+    name: Mending Light
+    description: "A warmth that closes small wounds."
+    domain: friendship
+    tier: 1
+    kind: combat
+    cost: 5
+    target: self
+    heal: 10
+  - id: shield_bash
+    name: Shield Bash
+    description: "Aldric slams his shield into whatever is closest. Once per fight."
+    kind: companion
+    cost: 0
+    target: enemy
+    power: 0.8
+    damage_type: blunt
+    effect: { status: stagger, turns: 1 }
   - id: smite_ii
     name: Greater Smite
     description: "The bolt lingers and burns."

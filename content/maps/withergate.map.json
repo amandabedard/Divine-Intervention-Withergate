@@ -2,76 +2,22 @@
   "id": "withergate",
   "version": 1,
   "name": "Withergate",
-  "size": {
-    "width": 3600,
-    "height": 720
-  },
   "town": "withergate",
   "interior": false,
+  "size": { "width": 4260, "height": 720 },
   "ground_y": 620,
   "background": [
-    {
-      "color": "#7d92aa",
-      "parallax": 0.2,
-      "repeatX": true,
-      "y": 380,
-      "silhouette": true
-    },
-    {
-      "color": "#586a82",
-      "parallax": 0.45,
-      "repeatX": true,
-      "y": 470,
-      "silhouette": true
-    }
+    { "color": "#7d92aa", "parallax": 0.2, "repeatX": true, "y": 380, "silhouette": true },
+    { "color": "#586a82", "parallax": 0.45, "repeatX": true, "y": 470, "silhouette": true }
   ],
   "layers": {
     "midground": [
-      {
-        "asset": "placeholder",
-        "x": 480,
-        "y": 320,
-        "w": 260,
-        "h": 300,
-        "color": "#8a6a4a",
-        "label": "Your Quarters"
-      },
-      {
-        "asset": "placeholder",
-        "x": 800,
-        "y": 340,
-        "w": 300,
-        "h": 280,
-        "color": "#7a6a5a",
-        "label": "Living Quarters"
-      },
-      {
-        "asset": "placeholder",
-        "x": 1200,
-        "y": 360,
-        "w": 240,
-        "h": 260,
-        "color": "#6a7a5a",
-        "label": "General Store"
-      },
-      {
-        "asset": "placeholder",
-        "x": 1520,
-        "y": 320,
-        "w": 320,
-        "h": 300,
-        "color": "#8a5a4a",
-        "label": "Tavern"
-      },
-      {
-        "asset": "placeholder",
-        "x": 2040,
-        "y": 520,
-        "w": 80,
-        "h": 100,
-        "color": "#5a4a3a",
-        "label": "Board"
-      }
+      { "asset": "placeholder", "x": 90, "y": 440, "w": 110, "h": 180, "color": "#6f7a8a", "label": "Shrine" },
+      { "asset": "placeholder", "x": 480, "y": 320, "w": 260, "h": 300, "color": "#8a6a4a", "label": "Your Quarters" },
+      { "asset": "placeholder", "x": 800, "y": 340, "w": 300, "h": 280, "color": "#7a6a5a", "label": "Living Quarters" },
+      { "asset": "placeholder", "x": 1200, "y": 360, "w": 240, "h": 260, "color": "#6a7a5a", "label": "General Store" },
+      { "asset": "placeholder", "x": 1520, "y": 320, "w": 320, "h": 300, "color": "#8a5a4a", "label": "Tavern" },
+      { "asset": "placeholder", "x": 2110, "y": 520, "w": 80, "h": 100, "color": "#5a4a3a", "label": "Board" }
     ],
     "ground": [],
     "decor": [],
@@ -79,181 +25,29 @@
   },
   "collision": [],
   "entities": [
-    {
-      "type": "spawn",
-      "id": "default",
-      "x": 300,
-      "y": 620,
-      "facing": "right"
-    },
-    {
-      "type": "spawn",
-      "id": "from_quarters",
-      "x": 640,
-      "y": 620,
-      "facing": "right"
-    },
-    {
-      "type": "spawn",
-      "id": "from_east_road",
-      "x": 3440,
-      "y": 620,
-      "facing": "left"
-    },
-    {
-      "type": "exit",
-      "id": "quarters_door",
-      "x": 580,
-      "y": 500,
-      "w": 70,
-      "h": 120,
-      "direction": "door",
-      "to": {
-        "map": "withergate_quarters",
-        "spawn": "from_door"
-      },
-      "auto": false,
-      "label": "Your Quarters"
-    },
-    {
-      "type": "interactable",
-      "id": "living_quarters_door",
-      "x": 920,
-      "y": 500,
-      "w": 70,
-      "h": 120,
-      "label": "Living Quarters",
-      "action": {
-        "kind": "open_ui",
-        "ui": "living_quarters"
-      }
-    },
-    {
-      "type": "interactable",
-      "id": "store_door",
-      "x": 1290,
-      "y": 500,
-      "w": 70,
-      "h": 120,
-      "label": "General Store",
-      "action": {
-        "kind": "open_ui",
-        "ui": "general_store"
-      }
-    },
-    {
-      "type": "interactable",
-      "id": "tavern_door",
-      "x": 1650,
-      "y": 500,
-      "w": 70,
-      "h": 120,
-      "label": "Tavern",
-      "action": {
-        "kind": "open_ui",
-        "ui": "tavern"
-      }
-    },
-    {
-      "type": "interactable",
-      "id": "notice_board",
-      "x": 2030,
-      "y": 520,
-      "w": 100,
-      "h": 100,
-      "label": "Notice board",
-      "action": {
-        "kind": "run_script",
-        "script": "shared/notice_board"
-      }
-    },
-    {
-      "type": "facility_slot",
-      "id": "slot_1",
-      "x": 2200,
-      "y": 620,
-      "size": "large"
-    },
-    {
-      "type": "facility_slot",
-      "id": "slot_2",
-      "x": 2620,
-      "y": 620,
-      "size": "large"
-    },
-    {
-      "type": "facility_slot",
-      "id": "slot_3",
-      "x": 3000,
-      "y": 620,
-      "size": "small"
-    },
-    {
-      "type": "facility_slot",
-      "id": "slot_4",
-      "x": 120,
-      "y": 620,
-      "size": "small"
-    },
-    {
-      "type": "facility_slot",
-      "id": "slot_5",
-      "x": 1880,
-      "y": 620,
-      "size": "small"
-    },
-    {
-      "type": "npc_spot",
-      "id": "square",
-      "x": 1080,
-      "y": 620,
-      "facing": "left"
-    },
-    {
-      "type": "npc_spot",
-      "id": "well",
-      "x": 1780,
-      "y": 620,
-      "facing": "left"
-    },
-    {
-      "type": "npc_spot",
-      "id": "gate",
-      "x": 3300,
-      "y": 620,
-      "facing": "left"
-    },
-    {
-      "type": "npc_spot",
-      "id": "lumber_pile",
-      "x": 2450,
-      "y": 620,
-      "facing": "right"
-    },
-    {
-      "type": "exit",
-      "id": "east_exit",
-      "x": 3540,
-      "y": 420,
-      "w": 60,
-      "h": 200,
-      "direction": "right",
-      "to": {
-        "map": "east_road",
-        "spawn": "from_withergate"
-      },
-      "label": "East road"
-    }
+    { "type": "spawn", "id": "default", "x": 300, "y": 620, "facing": "right" },
+    { "type": "spawn", "id": "from_quarters", "x": 640, "y": 620, "facing": "right" },
+    { "type": "spawn", "id": "from_east_road", "x": 4090, "y": 620, "facing": "left" },
+    { "type": "interactable", "id": "shrine", "x": 80, "y": 440, "w": 130, "h": 180, "label": "Your shrine", "action": { "kind": "open_ui", "ui": "shrine" } },
+    { "type": "exit", "id": "quarters_door", "x": 580, "y": 500, "w": 70, "h": 120, "direction": "door", "to": { "map": "withergate_quarters", "spawn": "from_door" }, "auto": false, "label": "Your Quarters" },
+    { "type": "interactable", "id": "living_quarters_door", "x": 920, "y": 500, "w": 70, "h": 120, "label": "Living Quarters", "action": { "kind": "open_ui", "ui": "living_quarters" } },
+    { "type": "interactable", "id": "store_door", "x": 1290, "y": 500, "w": 70, "h": 120, "label": "General Store", "action": { "kind": "open_ui", "ui": "general_store" } },
+    { "type": "interactable", "id": "tavern_door", "x": 1650, "y": 500, "w": 70, "h": 120, "label": "Tavern", "action": { "kind": "open_ui", "ui": "tavern" } },
+    { "type": "interactable", "id": "notice_board", "x": 2100, "y": 520, "w": 100, "h": 100, "label": "Notice board", "action": { "kind": "run_script", "script": "shared/notice_board" } },
+    { "type": "facility_slot", "id": "slot_1", "x": 2400, "y": 620, "size": "large" },
+    { "type": "facility_slot", "id": "slot_2", "x": 2760, "y": 620, "size": "large" },
+    { "type": "facility_slot", "id": "slot_3", "x": 3120, "y": 620, "size": "large" },
+    { "type": "facility_slot", "id": "slot_4", "x": 3480, "y": 620, "size": "large" },
+    { "type": "facility_slot", "id": "slot_5", "x": 3840, "y": 620, "size": "large" },
+    { "type": "npc_spot", "id": "square", "x": 1080, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "well", "x": 1780, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "lumber_pile", "x": 2300, "y": 620, "facing": "right" },
+    { "type": "npc_spot", "id": "gate", "x": 4100, "y": 620, "facing": "left" },
+    { "type": "exit", "id": "east_exit", "x": 4200, "y": 420, "w": 60, "h": 200, "direction": "right", "to": { "map": "east_road", "spawn": "from_withergate" }, "label": "East road" }
   ],
   "ambience": {
-    "tint": {
-      "evening": "#ffb070",
-      "night": "#1a2a5a"
-    },
-    "sky": {
-      "top": "#8fb8de",
-      "bottom": "#e7d9c3"
-    },
+    "tint": { "evening": "#ffb070", "night": "#1a2a5a" },
+    "sky": { "top": "#8fb8de", "bottom": "#e7d9c3" },
     "ground_color": "#6b5a44"
   }
 }

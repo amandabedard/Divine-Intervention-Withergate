@@ -1,5 +1,6 @@
 // The session is the single entry point the UI and scenes use to act on the game.
 import {
+  DAYS_PER_WEEK,
   DEFAULT_GIFT_POINTS,
   NOT_INTERESTED_LINE,
   mapEntities,
@@ -16,7 +17,9 @@ import type {
 } from '@withergate/shared';
 import { bus } from '../bridge/bus';
 import { store } from '../bridge/store';
-import type { DialogChoice, DialogLine, PanelKind } from '../bridge/store';
+import type { BattleView, DialogChoice, DialogLine, PanelKind, UiMode } from '../bridge/store';
+import { applyDefeat, playerAct, startBattle } from './combat/battle';
+import type { BattleAction, BattleEvent, BattleResult, BattleSource } from './combat/battle';
 import { evaluate } from './conditions';
 import type { CoreRequest, Ctx } from './ctx';
 import { Interpreter } from './dialog/interpreter';
@@ -29,13 +32,63 @@ import { listSlots, loadSlot, saveToSlot } from './save';
 import { newGame, residents, villagerState } from './state';
 import type { GameState, NewGameOptions } from './state';
 import { advancePhases, sleepUntilMorning } from './time';
+import {
+  buyOffer,
+  canBuild,
+  canUnlockPower,
+  craft,
+  demolish,
+  doActivity,
+  equipWeapon,
+  escortHome,
+  satchelAdd,
+  satchelRemove,
+  sell,
+  slotIds,
+  startBuild,
+  toggleEquip,
+  unlockPower,
+} from './town';
 
 type DoneMode = 'menu' | 'close' | 'scene' | 'natural';
+
+/** How long each combat event stays on screen before the next one plays. */
+const EVENT_DELAY: Partial<Record<BattleEvent['type'], number>> = {
+  start: 700,
+  round: 350,
+  line: 1000,
+  enemy_move: 450,
+  power: 450,
+  hit: 600,
+  miss: 500,
+  heal: 500,
+  status: 500,
+  status_tick: 450,
+  status_end: 300,
+  skip: 550,
+  defend: 400,
+  grace: 250,
+  intercept: 650,
+  flee: 800,
+  spare: 800,
+  end: 900,
+};
 
 class Session {
   private interp: Interpreter | null = null;
   private onDone: ((mode: DoneMode) => void) | null = null;
   private queued: (() => void)[] = [];
+  /** The ctx the running script shares, so effects and the requests they queue reach one place. */
+  private dialogCtx: Ctx | null = null;
+  // battle bookkeeping
+  private battleCtx: Ctx | null = null;
+  private battleFromInterp = false;
+  private battleHandlesLoss = false;
+  private battleAfter: { onWin?: Step[]; onLose?: Step[] } | null = null;
+  private battleReturnMode: UiMode = 'world';
+  private battlePending: BattleEvent[] = [];
+  private battleDraining = false;
+  private battleTimer: number | null = null;
 
   // -- context ---------------------------------------------------------------
 
@@ -67,24 +120,25 @@ class Session {
         this.after(() => bus.emit('world.enter', { map: r.map, spawn: r.spawn }));
         break;
       }
-      case 'cutscene': {
-        const c = store.content.cutscenes[r.id];
-        if (c) this.after(() => this.runScript(c.script, `cutscene:${r.id}`, undefined, () => this.setWorld()));
+      case 'cutscene':
+        this.after(() => this.runCutscene(r.id));
         break;
-      }
       case 'event': {
         const ev = this.findEvent(r.id);
         if (ev) this.after(() => this.playEvent(ev));
         break;
       }
       case 'battle':
-        store.toast(`A ${store.content.enemies[r.enemy]?.name ?? r.enemy} attacks! (Combat arrives in Phase 4: you win.)`);
+        this.after(() => this.startBattle(r.enemy, { source: 'script', onWin: r.on_win, onLose: r.on_lose }));
         break;
       case 'time_changed':
         bus.emit('time.changed');
         break;
       case 'npc_refresh':
         bus.emit('npc.refresh');
+        break;
+      case 'town_changed':
+        bus.emit('town.changed');
         break;
       default:
         break;
@@ -112,6 +166,7 @@ class Session {
         stats: { charisma: 5, intelligence: 5, luck: 5, dexterity: 5, perception: 5 },
         startMap: map,
         startSpawn: params.get('spawn') ?? undefined,
+        skipOpening: true,
       });
       return;
     }
@@ -131,8 +186,15 @@ class Session {
     store.updateUi({ mode: 'title' });
   }
 
-  newGame(opts: NewGameOptions): void {
-    const state = newGame(store.content, opts);
+  /** Start a new game. The opening cutscene plays on the landing map unless skipOpening is set. */
+  newGame(opts: NewGameOptions & { skipOpening?: boolean }): void {
+    const opening = store.content.cutscenes.opening;
+    const landing = opening?.stage?.map && store.content.maps[opening.stage.map] ? opening.stage.map : null;
+    const state = newGame(store.content, {
+      ...opts,
+      startMap: opts.startMap ?? (!opts.skipOpening && landing ? landing : undefined),
+    });
+    if (!opts.skipOpening && landing && !opts.startMap) state.flags.opening_pending = true;
     this.enterGame(state);
   }
 
@@ -142,7 +204,18 @@ class Session {
       form: 'fem',
       label: 'cool',
       stats: { charisma: 5, intelligence: 5, luck: 5, dexterity: 5, perception: 5 },
+      skipOpening: true,
     });
+    // Dev convenience: a couple of powers so combat can be tried without the skill tree.
+    const p = store.state?.player;
+    if (p) {
+      for (const id of ['smite', 'mending_light']) {
+        if (!store.content.powers[id]) continue;
+        if (!p.powers.includes(id)) p.powers.push(id);
+        if (!p.equippedPowers.includes(id) && p.equippedPowers.length < 4) p.equippedPowers.push(id);
+      }
+      store.commit();
+    }
   }
 
   load(slot: number): boolean {
@@ -155,9 +228,11 @@ class Session {
   private enterGame(state: GameState): void {
     this.interp = null;
     this.onDone = null;
+    this.dialogCtx = null;
     this.queued = [];
+    this.resetBattle();
     store.setState(state);
-    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false });
+    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false, battle: null });
     bus.emit('world.enter', { map: state.where.map, x: state.where.x, facing: state.where.facing });
   }
 
@@ -175,21 +250,132 @@ class Session {
     saveToSlot(slot, store.state!);
     store.toast(`A new day. Saved to slot ${slot}.`);
     this.closePanel();
-    this.onMapEntered(store.state!.where.map);
+    const map = store.state!.where.map;
+    if (!this.showNotices()) this.onMapEntered(map);
+    else this.after(() => this.onMapEntered(map));
   }
 
   slots() {
     return listSlots();
   }
 
+  /** Read out anything that arrived overnight (messenger warnings, finished buildings). */
+  showNotices(): boolean {
+    const s = store.state;
+    if (!s || !s.notices.length || this.interp) return false;
+    const steps: Step[] = s.notices.map((text) => ({ kind: 'line', speaker: 'narrate', text }));
+    s.notices = [];
+    store.commit();
+    this.runSteps(steps, 'notices', undefined, () => this.setWorld());
+    return true;
+  }
+
   // -- panels ----------------------------------------------------------------
 
-  openPanel(kind: PanelKind): void {
-    store.updateUi({ mode: 'panel', panel: kind });
+  openPanel(kind: PanelKind, arg: string | null = null): void {
+    store.updateUi({ mode: 'panel', panel: kind, panelArg: arg });
   }
 
   closePanel(): void {
-    store.updateUi({ mode: 'world', panel: null });
+    store.updateUi({ mode: 'world', panel: null, panelArg: null });
+  }
+
+  /** A build slot (or a built facility) on the town map was used. */
+  slotInteract(id: string): void {
+    const s = store.state;
+    if (!s) return;
+    const built = s.town.slots[id];
+    if (built) {
+      this.openPanel('facility', built);
+      return;
+    }
+    if (slotIds(this.ctx()).includes(id)) {
+      const building = s.town.buildQueue.find((b) => b.slot === id);
+      if (building) {
+        const name = store.content.facilities[building.facility]?.name ?? building.facility;
+        store.toast(`${name} will be ready in ${building.daysLeft} day${building.daysLeft === 1 ? '' : 's'}.`);
+        return;
+      }
+      this.openPanel('build', id);
+      return;
+    }
+    if (s.town.facilities.includes(id)) this.openPanel('facility', id);
+    else this.openPanel('build');
+  }
+
+  // -- town commands (each returns whether it succeeded; failures toast the reason) ----
+
+  town = {
+    build: (facility: string, slot: string): boolean => {
+      const ctx = this.ctx();
+      const err = canBuild(ctx, facility, slot);
+      if (err) {
+        store.toast(err);
+        return false;
+      }
+      startBuild(ctx, facility, slot);
+      this.flush(ctx);
+      this.closePanel();
+      return true;
+    },
+    demolish: (facility: string): boolean => {
+      const ctx = this.ctx();
+      const ok = demolish(ctx, facility);
+      this.flush(ctx);
+      if (ok) this.closePanel();
+      return ok;
+    },
+    escortHome: (id: string): void => {
+      const ctx = this.ctx();
+      escortHome(ctx, id);
+      this.flush(ctx);
+      this.closePanel();
+      this.showNotices();
+    },
+    buy: (offer: number, n: number): boolean => this.townCall((ctx) => buyOffer(ctx, offer, n)),
+    sell: (resource: Parameters<typeof sell>[1], n: number): boolean => this.townCall((ctx) => sell(ctx, resource, n)),
+    activity: (id: string): void => {
+      const ctx = this.ctx();
+      const r = doActivity(ctx, id);
+      if (!r.ok) {
+        store.toast(r.reason ?? 'Not now.');
+        return;
+      }
+      this.flush(ctx);
+      this.closePanel();
+      if (r.script) this.runScript(r.script, `tavern:${id}`, undefined, () => this.setWorld());
+    },
+    unlockPower: (id: string): boolean => {
+      const ctx = this.ctx();
+      const err = canUnlockPower(ctx, id);
+      if (err) {
+        store.toast(err);
+        return false;
+      }
+      unlockPower(ctx, id);
+      this.flush(ctx);
+      return true;
+    },
+    toggleEquip: (id: string): boolean => this.townCall((ctx) => toggleEquip(ctx, id)),
+    equipWeapon: (id: string | null): boolean => this.townCall((ctx) => equipWeapon(ctx, id)),
+    satchelAdd: (item: string): boolean => this.townCall((ctx) => satchelAdd(ctx, item)),
+    satchelRemove: (index: number): void => {
+      const ctx = this.ctx();
+      satchelRemove(ctx, index);
+      this.flush(ctx);
+    },
+    craft: (kind: 'weapon' | 'item', id: string): boolean => this.townCall((ctx) => craft(ctx, kind, id)),
+  };
+
+  private townCall(fn: (ctx: Ctx) => string | null): boolean {
+    const ctx = this.ctx();
+    const err = fn(ctx);
+    if (err) {
+      store.toast(err);
+      return false;
+    }
+    this.flush(ctx);
+    return true;
   }
 
   toggleDebug(): void {
@@ -237,14 +423,11 @@ class Session {
         ctx.state.town.resources[a.resource] += amount;
         ctx.state.flags[key] = ctx.state.time.day;
         this.flush(ctx);
-        this.runSteps(
-          [{ kind: 'line', speaker: 'narrate', text: `You gather ${amount} ${a.resource}. It will go to Withergate's stores.` }],
-          key,
-        );
+        this.runSteps([{ kind: 'line', speaker: 'narrate', text: `You gather ${amount} ${a.resource}.` }], key);
         break;
       }
       case 'facility':
-        this.openPanel('build');
+        this.slotInteract(a.facility);
         break;
       default:
         break;
@@ -269,10 +452,60 @@ class Session {
     return true;
   }
 
-  /** Called by the world scene once a map is built; fires enter_map heart events. */
+  /** Place the stage's actors and run a cutscene on the current map. */
+  runCutscene(id: string): void {
+    const c = store.content.cutscenes[id];
+    if (!c || !store.state) return;
+    for (const [who, at] of Object.entries(c.stage?.place ?? {})) {
+      bus.emit('stage', { step: { kind: 'stage', op: 'place', args: { who, at } }, done: () => undefined });
+    }
+    store.updateUi({ mode: 'dialog', talk: null });
+    this.runScript(c.script, `cutscene:${id}`, undefined, () => this.setWorld());
+  }
+
+  /** A trigger zone was entered. Returns true when something started. */
+  fireTrigger(t: EntityOf<'trigger'>): boolean {
+    if (!store.state || this.interp) return false;
+    const ctx = this.ctx();
+    const key = `trigger:${ctx.state.where.map}:${t.id}`;
+    if (t.once && ctx.state.flags[key]) return false;
+    if (t.requires && !evaluate(t.requires, ctx)) return false;
+    ctx.state.flags[key] = true;
+    store.commit();
+    switch (t.action.kind) {
+      case 'run_script': {
+        const s = store.content.shared[t.action.script];
+        if (!s) return false;
+        store.updateUi({ mode: 'dialog', talk: null });
+        this.runScript(s, t.action.script, undefined, () => this.setWorld());
+        return true;
+      }
+      case 'start_event': {
+        const ev = this.findEvent(t.action.event);
+        if (!ev) return false;
+        this.playEvent(ev);
+        return true;
+      }
+      case 'start_cutscene':
+        this.runCutscene(t.action.cutscene);
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** Called by the world scene once a map is built; runs the opening, quest checks and enter_map heart events. */
   onMapEntered(mapId: string): void {
     if (!store.state || this.interp) return;
     const ctx = this.ctx();
+    if (ctx.state.flags.opening_pending) {
+      delete ctx.state.flags.opening_pending;
+      this.flush(ctx);
+      this.runCutscene('opening');
+      return;
+    }
+    this.flush(ctx);
+    if (store.ui.mode !== 'world') return;
     const candidates: HeartEvent[] = [];
     for (const v of Object.values(store.content.villagers)) {
       for (const ev of v.events) {
@@ -319,8 +552,17 @@ class Session {
     introduce(ctx, id);
     this.flush(ctx);
     store.updateUi({ mode: 'dialog', talk: { villager: id, view: 'menu' } });
-    // talk-triggered heart events play before the menu
     const rel = villagerState(store.state, store.content, id);
+    // an unhappy resident says why before anything else
+    if (rel.resident && rel.unhappy) {
+      const reason = rel.unhappy.reason;
+      const entry = store.content.villagers[id]!.recruit?.unhappy.find((u) => evaluate(u.when, { ...ctx, extras: { reason } }));
+      if (entry) {
+        this.runSteps(ctx.rng.pick(entry.lines), `unhappy:${id}`, id, () => this.showMenu());
+        return;
+      }
+    }
+    // talk-triggered heart events play before the menu
     const ev = store.content.villagers[id]!.events
       .filter((e) => e.trigger.on === 'talk' && !(e.trigger.once && rel.eventsSeen.includes(e.id)))
       .filter((e) => evaluate(e.trigger.requires, ctx))
@@ -347,6 +589,7 @@ class Session {
   exitTalk(): void {
     this.interp = null;
     this.onDone = null;
+    this.dialogCtx = null;
     store.updateUi({ mode: 'world', talk: null, line: null, choices: null, roll: null, dialogActive: false });
     this.drainQueue();
   }
@@ -522,8 +765,15 @@ class Session {
     const ctx = this.ctx(id);
     const v = store.content.villagers[id]!;
     const rel = villagerState(ctx.state, ctx.content, id);
-    if (rel.giftedDay === ctx.state.time.day) {
-      this.runSteps([{ kind: 'line', speaker: 'narrate', text: `You already gave ${v.profile.name} something today.` }], `gift:${id}`, id, () => this.showMenu());
+    // One gift per character per week (decided F7).
+    if (rel.giftedDay > 0 && ctx.state.time.day - rel.giftedDay < DAYS_PER_WEEK) {
+      const wait = DAYS_PER_WEEK - (ctx.state.time.day - rel.giftedDay);
+      this.runSteps(
+        [{ kind: 'line', speaker: 'narrate', text: `You already gave ${v.profile.name} something this week. (${wait} day${wait === 1 ? '' : 's'} to go)` }],
+        `gift:${id}`,
+        id,
+        () => this.showMenu(),
+      );
       return;
     }
     // consume
@@ -555,6 +805,112 @@ class Session {
     this.runSteps(steps, `gift:${id}:${itemId}`, id, (mode) => (mode === 'close' ? this.exitTalk() : this.showMenu()));
   }
 
+  // -- battle ----------------------------------------------------------------
+
+  /**
+   * Start a fight. From a running script the script resumes with its on_win / on_lose branch
+   * afterwards; otherwise the optional onWin / onLose steps run as their own script.
+   */
+  startBattle(
+    enemyId: string,
+    opts: { source: BattleSource; fromInterp?: boolean; handlesLoss?: boolean; onWin?: Step[]; onLose?: Step[] },
+  ): boolean {
+    if (!store.state || store.state.battle) return false;
+    if (!store.content.enemies[enemyId]) {
+      store.toast(`Unknown enemy "${enemyId}".`);
+      return false;
+    }
+    this.battleFromInterp = !!opts.fromInterp;
+    this.battleHandlesLoss = !!opts.handlesLoss || !!opts.onLose;
+    this.battleAfter = { onWin: opts.onWin, onLose: opts.onLose };
+    this.battleReturnMode = store.ui.mode === 'dialog' ? 'dialog' : 'world';
+    const ctx = opts.fromInterp && this.dialogCtx ? this.dialogCtx : this.ctx();
+    this.battleCtx = ctx;
+    const events = startBattle(ctx, enemyId, opts.source);
+    store.updateUi({ mode: 'battle', battle: { log: [], busy: true, view: 'main' } });
+    bus.emit('battle.start', { enemy: enemyId });
+    this.queueBattleEvents(events);
+    return true;
+  }
+
+  /** The player's action for this turn; ignored while events are still animating. */
+  battleAct(action: BattleAction): void {
+    const b = store.state?.battle;
+    if (!b || !this.battleCtx || b.phase !== 'active' || !b.awaitingInput || store.ui.battle?.busy) return;
+    const events = playerAct(this.battleCtx, action);
+    if (!events.length) return;
+    store.updateUi({ battle: { ...store.ui.battle!, busy: true, view: 'main' } });
+    this.queueBattleEvents(events);
+  }
+
+  setBattleView(view: BattleView['view']): void {
+    if (!store.ui.battle) return;
+    store.updateUi({ battle: { ...store.ui.battle, view } });
+  }
+
+  private queueBattleEvents(events: BattleEvent[]): void {
+    this.battlePending.push(...events);
+    if (!this.battleDraining) this.drainBattle();
+  }
+
+  private drainBattle(): void {
+    const ev = this.battlePending.shift();
+    if (!ev) {
+      this.battleDraining = false;
+      this.afterBattleEvents();
+      return;
+    }
+    this.battleDraining = true;
+    if (store.ui.battle) store.updateUi({ battle: { ...store.ui.battle, log: [...store.ui.battle.log, ev].slice(-10) } });
+    else store.commit();
+    bus.emit('battle.event', ev);
+    this.battleTimer = window.setTimeout(() => this.drainBattle(), EVENT_DELAY[ev.type] ?? 450);
+  }
+
+  private afterBattleEvents(): void {
+    const b = store.state?.battle;
+    if (!b) return;
+    if (b.phase === 'active') {
+      if (store.ui.battle) store.updateUi({ battle: { ...store.ui.battle, busy: false } });
+      return;
+    }
+    this.finishBattle(b.phase);
+  }
+
+  private finishBattle(result: BattleResult): void {
+    const ctx = this.battleCtx ?? this.ctx();
+    const won = result === 'won' || result === 'spared';
+    const fromInterp = this.battleFromInterp && !!this.interp;
+    const after = this.battleAfter;
+    const handlesLoss = this.battleHandlesLoss;
+    const returnMode = this.battleReturnMode;
+    store.state!.battle = null;
+    this.resetBattle();
+    bus.emit('battle.end', { result });
+    store.updateUi({ mode: fromInterp ? 'dialog' : returnMode, battle: null });
+    if (!won && !handlesLoss) applyDefeat(ctx);
+    if (fromInterp) {
+      this.interp!.resolveBattle(won);
+      this.pump(ctx);
+      return;
+    }
+    this.flush(ctx);
+    const steps = won ? after?.onWin : after?.onLose;
+    if (steps?.length) this.runSteps(steps, `battle:${result}`, undefined, () => this.setWorld());
+    else if (store.ui.mode === 'dialog' && !this.interp) this.setWorld();
+  }
+
+  private resetBattle(): void {
+    if (this.battleTimer !== null) window.clearTimeout(this.battleTimer);
+    this.battleTimer = null;
+    this.battlePending = [];
+    this.battleDraining = false;
+    this.battleCtx = null;
+    this.battleFromInterp = false;
+    this.battleHandlesLoss = false;
+    this.battleAfter = null;
+  }
+
   // -- dialog engine ---------------------------------------------------------
 
   runSteps(steps: Step[], id: string, speaker?: string, onDone?: (mode: DoneMode) => void): void {
@@ -563,6 +919,7 @@ class Session {
 
   runScript(script: Script, id: string, speaker?: string, onDone?: (mode: DoneMode) => void): void {
     const ctx = this.ctx(speaker);
+    this.dialogCtx = ctx;
     this.interp = new Interpreter(ctx, script, id);
     this.onDone = onDone ?? (() => this.setWorld());
     store.updateUi({ mode: 'dialog', line: null, choices: null, roll: null });
@@ -606,17 +963,23 @@ class Session {
         break;
       }
       case 'battle':
-        store.toast(`A ${store.content.enemies[o.step.enemy]?.name ?? o.step.enemy} attacks! (Combat arrives in Phase 4: you win.)`);
-        interp.resolveBattle(true);
-        this.pump(ctx);
+        // The script waits; finishBattle() resumes it with resolveBattle().
+        if (!this.startBattle(o.step.enemy, { source: 'script', fromInterp: true, handlesLoss: !!o.step.on_lose })) {
+          interp.resolveBattle(true);
+          this.pump(ctx);
+        }
         return;
       case 'done': {
         this.interp = null;
+        this.dialogCtx = null;
         store.updateUi({ line: null, choices: null, roll: null, dialogActive: false });
         const cb = this.onDone;
         this.onDone = null;
-        this.flush(ctx);
+        // Let the finished script's owner settle the UI first (back to the menu or the
+        // world), then flush requests such as start_cutscene so a follow-up scene is not
+        // immediately overwritten by that owner.
         cb?.(o.mode);
+        this.flush(ctx);
         return;
       }
       default:
@@ -626,22 +989,18 @@ class Session {
   }
 
   advanceDialog(): void {
-    if (!this.interp) return;
+    if (!this.interp || !this.dialogCtx) return;
     if (store.ui.choices) return;
     if (store.ui.roll) store.updateUi({ roll: null });
-    this.pump(this.ctx(this.speakerOf()));
+    this.pump(this.dialogCtx);
   }
 
   chooseOption(index: number): void {
-    if (!this.interp) return;
+    if (!this.interp || !this.dialogCtx) return;
     const out = this.interp.choose(index);
     if (!out) return;
     store.updateUi({ choices: null });
-    this.pump(this.ctx(this.speakerOf()), out);
-  }
-
-  private speakerOf(): string | undefined {
-    return store.ui.talk?.villager ?? store.ui.line?.speaker;
+    this.pump(this.dialogCtx, out);
   }
 
   private toLine(speaker: string, text: string, mood: string | undefined, loc?: string): DialogLine {
@@ -666,6 +1025,7 @@ class Session {
       const ctx = this.ctx();
       sleepUntilMorning(ctx);
       this.flush(ctx);
+      if (store.ui.mode === 'world') this.showNotices();
     },
     setFriendship: (id: string, n: number) => {
       villagerState(store.state!, store.content, id).friendship = n;
@@ -703,13 +1063,35 @@ class Session {
       store.commit();
       bus.emit('world.enter', { map, spawn: s.id });
     },
-    grant: (what: 'faith' | 'xp' | 'gold', n: number) => {
+    grant: (what: 'faith' | 'xp' | 'gold' | 'skill' | 'materials', n: number) => {
       const ctx = this.ctx();
       if (what === 'gold') ctx.state.town.resources.gold += n;
-      else applyEffects(what === 'faith' ? { faith: n } : { xp: n }, ctx);
+      else if (what === 'skill') ctx.state.player.skillPoints += n;
+      else if (what === 'materials') {
+        for (const r of ['wood', 'stone', 'ore', 'food', 'herbs', 'cloth'] as const) ctx.state.town.resources[r] += n;
+      } else applyEffects(what === 'faith' ? { faith: n } : { xp: n }, ctx);
       this.flush(ctx);
     },
     tierLabel: (id: string) => tierForPoints(villagerState(store.state!, store.content, id).friendship),
+    startBattle: (enemy: string) => this.startBattle(enemy, { source: 'debug' }),
+    setParty: (ids: string[]) => {
+      store.state!.party = ids.slice(0, 2);
+      store.commit();
+    },
+    setWeapon: (id: string) => {
+      store.state!.player.weaponId = id || null;
+      store.commit();
+    },
+    togglePower: (id: string) => {
+      const p = store.state!.player;
+      if (p.equippedPowers.includes(id)) {
+        p.equippedPowers = p.equippedPowers.filter((x) => x !== id);
+      } else {
+        if (!p.powers.includes(id)) p.powers.push(id);
+        if (p.equippedPowers.length < 4) p.equippedPowers.push(id);
+      }
+      store.commit();
+    },
   };
 }
 

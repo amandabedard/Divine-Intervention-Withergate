@@ -1,0 +1,38 @@
+{
+  "id": "landing_glade",
+  "version": 1,
+  "name": "A Glade",
+  "size": { "width": 2600, "height": 720 },
+  "ground_y": 620,
+  "background": [
+    { "color": "#6f8aa3", "parallax": 0.2, "silhouette": true, "y": 360 },
+    { "color": "#3f5f45", "parallax": 0.45, "silhouette": true, "y": 440 },
+    { "color": "#2f4a36", "parallax": 0.7, "silhouette": true, "y": 520 }
+  ],
+  "layers": {
+    "midground": [
+      { "asset": "placeholder", "x": 120, "y": 320, "w": 110, "h": 300, "color": "#2f5a34", "label": "Tree" },
+      { "asset": "placeholder", "x": 700, "y": 340, "w": 90, "h": 280, "color": "#356a3c", "label": "Tree" },
+      { "asset": "placeholder", "x": 1100, "y": 360, "w": 80, "h": 260, "color": "#2f5a34", "label": "Tree" },
+      { "asset": "placeholder", "x": 1240, "y": 560, "w": 140, "h": 60, "color": "#4a3a2a", "label": "Scorched earth" },
+      { "asset": "placeholder", "x": 1900, "y": 330, "w": 100, "h": 290, "color": "#356a3c", "label": "Tree" },
+      { "asset": "placeholder", "x": 2380, "y": 350, "w": 90, "h": 270, "color": "#2f5a34", "label": "Tree" }
+    ]
+  },
+  "entities": [
+    { "type": "spawn", "id": "fall", "x": 1300, "y": 620, "facing": "right" },
+    { "type": "interactable", "id": "forage_herbs", "x": 420, "y": 570, "w": 140, "h": 50, "label": "Bitterleaf", "action": { "kind": "forage", "resource": "herbs", "amount": [1, 2] } },
+    { "type": "interactable", "id": "forage_wood", "x": 860, "y": 540, "w": 120, "h": 80, "label": "Deadfall", "action": { "kind": "forage", "resource": "wood", "amount": [1, 3] } },
+    { "type": "interactable", "id": "crater", "x": 1240, "y": 560, "w": 140, "h": 60, "label": "Where you landed", "action": { "kind": "sign", "text": "[PLACEHOLDER: The grass is burned in the shape of a person. Yours.]" } },
+    { "type": "trigger", "id": "first_fight", "x": 1620, "y": 400, "w": 60, "h": 220, "once": true, "action": { "kind": "run_script", "script": "opening/first_fight" } },
+    { "type": "npc_spot", "id": "glade_center", "x": 1300, "y": 620, "facing": "right" },
+    { "type": "npc_spot", "id": "glade_center_right", "x": 1440, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "path_east", "x": 2350, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "fight_spot", "x": 1700, "y": 620, "facing": "left" }
+  ],
+  "ambience": {
+    "sky": { "top": "#7fa3c4", "bottom": "#d8dcc0" },
+    "ground_color": "#4f5a3a",
+    "tint": { "evening": "#ffb070", "night": "#1a2a5a" }
+  }
+}

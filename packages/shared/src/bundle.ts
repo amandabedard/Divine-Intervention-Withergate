@@ -4,6 +4,7 @@ import type { VillagerBundle } from './villager.ts';
 import type {
   BiomeDef,
   Cutscene,
+  Economy,
   Encounter,
   Enemy,
   Facility,
@@ -12,6 +13,7 @@ import type {
   Progression,
   Quest,
   Region,
+  TavernActivity,
   Weapon,
 } from './world.ts';
 
@@ -49,9 +51,18 @@ export interface ContentBundle {
   shared: Record<string, Script>;
   maps: Record<string, GameMap>;
   progression: Progression;
+  economy: Economy;
+  tavern: TavernActivity[];
   issues: Issue[];
   stats: ContentStats;
 }
+
+export const DEFAULT_ECONOMY: Economy = {
+  prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 },
+  sell_rate: 0.5,
+  gifts: {},
+  stock: { offers: 5, markup: [1.2, 1.8], units: { default: 10 }, weights: {} },
+};
 
 export const DEFAULT_PROGRESSION: Progression = {
   level_cap: 20,
@@ -84,6 +95,8 @@ export function emptyBundle(): ContentBundle {
     shared: {},
     maps: {},
     progression: DEFAULT_PROGRESSION,
+    economy: DEFAULT_ECONOMY,
+    tavern: [],
     issues: [],
     stats: { files: 0, villagers: 0, maps: 0, lines: 0, placeholders: 0 },
   };

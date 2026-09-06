@@ -16,7 +16,9 @@ export type CoreRequest =
   | { kind: 'event'; id: string }
   | { kind: 'battle'; enemy: string; on_win?: Step[]; on_lose?: Step[] }
   | { kind: 'time_changed' }
-  | { kind: 'npc_refresh' };
+  | { kind: 'npc_refresh' }
+  /** Facilities or slots changed; the world redraws the town. */
+  | { kind: 'town_changed' };
 
 export interface Ctx {
   state: GameState;

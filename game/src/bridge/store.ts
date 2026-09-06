@@ -1,13 +1,36 @@
 import { useSyncExternalStore } from 'react';
 import { EMPTY_INDEX, EMPTY_MANIFEST, emptyBundle } from '@withergate/shared';
 import type { AssetManifest, ContentBundle, GeneratedIndex } from '@withergate/shared';
+import type { BattleEvent } from '../core/combat/battle';
 import { Rng } from '../core/rng';
 import type { GameState } from '../core/state';
 import { bus } from './bus';
 
-export type PanelKind = 'bed' | 'living_quarters' | 'general_store' | 'tavern' | 'build' | 'notice_board';
-export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel';
+export type PanelKind =
+  | 'quarters'
+  | 'bed'
+  | 'loadout'
+  | 'satchel'
+  | 'storage'
+  | 'residents'
+  | 'living_quarters'
+  | 'general_store'
+  | 'tavern'
+  | 'build'
+  | 'shrine'
+  | 'facility'
+  | 'craft'
+  | 'notice_board';
+export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle';
 export type TalkView = 'menu' | 'topics' | 'gifts';
+
+export interface BattleView {
+  /** Recent events, oldest first, for the on-screen log. */
+  log: BattleEvent[];
+  /** True while events are still being animated; the action menu waits. */
+  busy: boolean;
+  view: 'main' | 'powers' | 'companions';
+}
 
 export interface DialogLine {
   speaker: string;
@@ -43,11 +66,14 @@ export interface Toast {
 export interface UiState {
   mode: UiMode;
   panel: PanelKind | null;
+  /** Extra context for a panel: a slot id for build, a facility id for facility/craft. */
+  panelArg: string | null;
   talk: TalkState | null;
   line: DialogLine | null;
   choices: DialogChoice[] | null;
   roll: DialogRoll | null;
   dialogActive: boolean;
+  battle: BattleView | null;
   toasts: Toast[];
   debugOpen: boolean;
 }
@@ -65,11 +91,13 @@ function initialUi(): UiState {
   return {
     mode: 'boot',
     panel: null,
+    panelArg: null,
     talk: null,
     line: null,
     choices: null,
     roll: null,
     dialogActive: false,
+    battle: null,
     toasts: [],
     debugOpen: false,
   };

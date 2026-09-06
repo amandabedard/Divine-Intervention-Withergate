@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import content from 'virtual:withergate-content';
 import { store } from './bridge/store';
 import { session } from './core/session';
+import { BattleScene } from './scenes/BattleScene';
 import { BootScene } from './scenes/BootScene';
 import { WorldScene } from './scenes/WorldScene';
 import { App } from './ui/App';
@@ -20,7 +21,7 @@ export const game = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   render: { antialias: true, pixelArt: false },
   input: { keyboard: { capture: [] } },
-  scene: [BootScene, WorldScene],
+  scene: [BootScene, WorldScene, BattleScene],
 });
 
 if (import.meta.env.DEV) {

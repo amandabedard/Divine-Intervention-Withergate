@@ -1,0 +1,38 @@
+# SAMPLE CHARACTER — a farmer who will only stay if there is a Farm to work. Replace freely.
+id: wren
+name: Wren
+pronouns: she/her
+profession: farmer
+home_town: dilsdurf
+romanceable: false
+
+bio: "[PLACEHOLDER: Wren's bio. A sample farmer used to exercise workplace conditions.]"
+likes: [rain, honest work]
+dislikes: [idleness]
+gifts:
+  liked: [hearty_stew]
+  disliked: [perfume]
+
+recruit:
+  requires: { tier: acquaintance+, facility: farm }
+  method: { kind: ask }
+  leaves_if:
+    - not_facility: farm
+  workplace: farm
+
+energy: 5
+
+# While she lives here, food shows up at the general store more often (added to economy.yaml → stock.weights).
+store: { food: 4 }
+
+benefits:
+  town:
+    - { type: resource_income, resource: food, amount: 3 }
+
+# SAMPLE: Dilsdurf has no maps yet, so she stands around Withergate to be met.
+schedule:
+  home:
+    morning: { map: withergate, spot: lumber_pile }
+    afternoon: { map: withergate, spot: lumber_pile }
+    evening: { map: withergate, spot: square }
+    night: { map: none }

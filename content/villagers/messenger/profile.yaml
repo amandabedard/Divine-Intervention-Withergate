@@ -1,0 +1,17 @@
+# The King's messenger: a named non-recruitable character. He only appears where cutscenes place him.
+id: messenger
+name: The King's Messenger
+pronouns: he/him
+profession: none
+home_town: aboridge
+romanceable: false
+bio: "[PLACEHOLDER: A rider in Aboridge livery who drew the short straw.]"
+likes: []
+dislikes: []
+gifts: {}
+schedule:
+  home:
+    morning: { map: none }
+    afternoon: { map: none }
+    evening: { map: none }
+    night: { map: none }

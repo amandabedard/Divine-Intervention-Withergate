@@ -10,6 +10,7 @@ export function DebugPanel({ snap }: { snap: Snapshot }) {
   const [tag, setTag] = useState('');
   const [map, setMap] = useState(s?.where.map ?? Object.keys(snap.content.maps)[0] ?? '');
   const [spawn, setSpawn] = useState('');
+  const [enemy, setEnemy] = useState(Object.keys(snap.content.enemies)[0] ?? '');
   const issues = snap.content.issues;
   const spawns = snap.content.maps[map] ? mapEntities(snap.content.maps[map]!, 'spawn') : [];
 
@@ -48,16 +49,73 @@ export function DebugPanel({ snap }: { snap: Snapshot }) {
           </section>
 
           <section>
+            <h4>Battle</h4>
+            <div className="row">
+              <select value={enemy} onChange={(e) => setEnemy(e.target.value)}>
+                {Object.values(snap.content.enemies).map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} ({e.tier})
+                  </option>
+                ))}
+              </select>
+              <button disabled={!!s.battle || !enemy} onClick={() => session.debug.startBattle(enemy)}>
+                Start battle
+              </button>
+            </div>
+            <div className="row wrap">
+              <span>Party:</span>
+              {Object.values(snap.content.villagers)
+                .filter((v) => v.profile.recruit)
+                .map((v) => (
+                  <label key={v.profile.id}>
+                    <input
+                      type="checkbox"
+                      checked={s.party.includes(v.profile.id)}
+                      disabled={!!s.battle}
+                      onChange={(e) =>
+                        session.debug.setParty(e.target.checked ? [...s.party, v.profile.id] : s.party.filter((id) => id !== v.profile.id))
+                      }
+                    />{' '}
+                    {v.profile.name}
+                  </label>
+                ))}
+            </div>
+            <div className="row">
+              <span>Weapon:</span>
+              <select value={s.player.weaponId ?? ''} onChange={(e) => session.debug.setWeapon(e.target.value)}>
+                <option value="">(bare hands)</option>
+                {Object.values(snap.content.weapons).map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} · {w.damage_type} ×{w.power}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="row wrap">
+              <span>Powers:</span>
+              {Object.values(snap.content.powers)
+                .filter((p) => p.kind === 'combat')
+                .map((p) => (
+                  <label key={p.id}>
+                    <input type="checkbox" checked={s.player.equippedPowers.includes(p.id)} onChange={() => session.debug.togglePower(p.id)} /> {p.name} ({p.cost})
+                  </label>
+                ))}
+            </div>
+          </section>
+
+          <section>
             <h4>Player</h4>
             <div className="muted">
-              {s.player.name} · lv {s.player.level} ({s.player.xp} xp) · faith {s.player.faith} (lv {faithLevel(s, snap.content)}) · skill pts {s.player.skillPoints} · lean{' '}
-              {domainLean(s)}
+              {s.player.name} · lv {s.player.level} ({s.player.xp} xp) · hp {s.player.hp} · grace {s.player.grace} · energy {s.player.energy} · faith {s.player.faith} (lv{' '}
+              {faithLevel(s, snap.content)}) · skill pts {s.player.skillPoints} · lean {domainLean(s)} (secret)
             </div>
             <div className="muted">{DOMAINS.map((d) => `${d} ${s.player.domainPoints[d]}`).join(' · ')}</div>
             <div className="row">
               <button onClick={() => session.debug.grant('faith', 10)}>+10 faith</button>
+              <button onClick={() => session.debug.grant('skill', 1)}>+1 skill pt</button>
               <button onClick={() => session.debug.grant('xp', 50)}>+50 xp</button>
-              <button onClick={() => session.debug.grant('gold', 50)}>+50 gold</button>
+              <button onClick={() => session.debug.grant('gold', 100)}>+100 gold</button>
+              <button onClick={() => session.debug.grant('materials', 50)}>+50 materials</button>
             </div>
             <div className="row wrap">
               <span>Tags:</span>

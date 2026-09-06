@@ -44,11 +44,11 @@ There is no item inventory and no healing items. Everything gathered goes to Wit
 
 Five axes (decided): **friendship, pleasure, prosperity, combat, discovery**. Ids `friendship / pleasure / prosperity / combat / discovery`.
 
-**The title is earned, not chosen (decided).** Choices, quests, and deeds award domain points on the five axes throughout the game, based on what you actually do. Nothing is locked in. At the end, the game generates what you are the Deity *of* from your accumulated stats: the leading axis, with the secondary axis and notable tags available for flavour (question F5). Content reads your current leaning through `domain_lean` and thresholds through `domain_points_min`.
+**The title is earned, not chosen (decided).** Choices, quests, and deeds award domain points on the five axes throughout the game, based on what you actually do. Nothing is locked in. At the end, the game generates what you are the Deity *of* from your accumulated stats. **It is a secret (decided F5):** no screen, toast, or line hints at the leanings before the ending, so `{domain}` in dialog and the `domain_lean` condition are for the ending and for characters reacting in-character, never for telling the player their score. Content reads the leaning through `domain_lean` and thresholds through `domain_points_min`.
 
 **Faith (decided)** is the progression, not a spendable resource and not a separate renown meter. You earn it by doing things and completing story and character quests as humans come to believe in you. Faith levels grant skill points.
 
-**Powers form a skill tree (decided E1).** Each power belongs to an axis, needs a faith level (`tier`), may require other powers (`requires`), and costs skill points (`points`). Unlocking a power adds a point to its axis, so your powers and your eventual title reinforce each other. A power is either a combat action (costs Grace, scales with Divinity) or an out-of-combat ability (a discovery power that previews nodes, a pleasure power that improves tavern events, a combat power that reduces caravan ambushes). Format in [data-formats.md](../content/data-formats.md); tree shape is question F1.
+**Powers form five small skill trees, one per axis (decided E1, F1).** Each power belongs to an axis, needs a faith level (`tier`), may require other powers (`requires`), and costs skill points (`points`, 1 point per faith level, no respec). Unlocking a power adds a point to its axis, so your powers and your eventual title reinforce each other. A power is either a combat action (costs Grace, scales with Divinity) or an out-of-combat ability (a discovery power that previews nodes, a pleasure power that improves tavern events, a combat power that reduces caravan ambushes). Format in [data-formats.md](../content/data-formats.md).
 
 Leanings also shape who will join Withergate and how villagers feel about you, through `domain_affinity` in profiles.
 
@@ -70,7 +70,7 @@ Five towns plus Withergate. Each town is a small set of side-scroller maps (a ma
 Each town has its own conflict (decided): a class war in Aboridge under the king, two towns at war with each other, one at peace, and one dealing with corruption. Town relations are tracked as a matrix (allied / tense / hostile) driven by story and quests. Withergate starts neutral. Details TBD in the town bibles.
 
 ### 5.3 Corruption
-A world value 0–10 (proposed) that rises on a schedule slowed or reversed by story progress. Effects: node weights near the frontier (more monsters, corrupted variants, corrupted gather nodes), incursion events at Withergate (defend it; Barracks and Warriors help), corrupted checkpoints. **Special corruption maps must be cleared; otherwise it starts killing non-recruited NPCs at random (decided).** Recruiting someone protects them. Which characters are at risk and how much warning you get is question F4.
+A world value 0–10 (proposed) that rises on a schedule slowed or reversed by story progress. Effects: node weights near the frontier (more monsters, corrupted variants, corrupted gather nodes), incursion events at Withergate (defend it; Barracks and Warriors help), corrupted checkpoints. **Special corruption maps must be cleared; otherwise it starts killing non-recruited NPCs at random (decided).** At risk: any character who is not recruited and not marked `protected: true` on their sheet (the king and story figures are protected). Recruiting someone protects them. **Cadence (decided G3):** a full week (5 days) without clearing corruption brings the warning: "You can feel the corruption leaking into the mortal plane. Better do something about it before something terrible happens." If a corruption dungeon has not been started within the next 3 days, someone is taken, and the messenger reports it: "It appears we lost xyz in H town to the corruption last night…" (decided F4). What counts as clearing, and whether starting a dungeon pauses the clock, is question H1. Implementation arrives with the story systems (Phase 8).
 
 ### 5.4 Making yourself known
 There is no separate renown meter (decided). Making your presence known *is* faith (§3): it rises as you complete story plot items and specific character quests, and it is what unlocks abilities and the ending.
@@ -96,7 +96,7 @@ Biomes (proposed): plains, forest, hills, marsh, corrupted frontier. Each region
 - **Chat:** banter drawn from pools keyed by conditions (tier, romance state, time, location, tags, flags). The first chat of the day gives +1 friendship (proposed); later chats give nothing.
 - **Discuss:** a list of topics. `!` marks quest-related topics, ♥ marks getting-to-know / friendship topics. Topics unlock by conditions (tier, flags, quest state); most are one-time. Topics contain choices with relationship effects.
 - **Flirt:** romanceable characters respond by romance state. Non-romanceable characters always say "I'm just not interested, sorry." with no effect. Only the first flirt per day has an effect (proposed). Flirting at Stranger is rebuffed with no gain (proposed).
-- **Give Gift:** choose from your satchel, or from town storage when in Withergate. One gift per character per day (proposed). The reaction category comes from the character's lists; special gifts have item-specific overrides.
+- **Give Gift:** choose from your satchel, or from town storage when in Withergate. One gift per character per week, five days (decided F7). The reaction category comes from the character's lists; special gifts have item-specific overrides.
 
 ### 7.2 Friendship tiers
 Enemy < Disliked < Stranger < Acquaintance < Friend < Best Friend. Point thresholds in §15. Stranger is also the pre-introduction state; introduction happens on the first Chat or Discuss and applies any starting bonus from tag affinities.
@@ -145,27 +145,34 @@ Proposed defaults (Amanda edits freely):
 Bio, likes and dislikes (which weight social interactions), gift lists, tag affinities, romanceable flag, home town, schedule, energy, benefits, recruit conditions, leave conditions. Format: [villager-format.md](../content/villager-format.md).
 
 ### 8.3 Recruitment
-Up to 10 residents. Unlock conditions are per character: a facility present, a tier, flags, a leaning, another villager present or absent. When met, a "Come to Withergate" topic appears under Discuss (decided). **How they agree is also per character** (`recruit.method`): they simply say yes; a chance roll (e.g. 50%, at most 3 asks; question F2 covers what happens after the last failure); a quest that must be done; or an item you must bring. Living Quarters shows the roster, capacity, and each resident's condition status (green / amber / red).
+Up to 10 residents. Unlock conditions are per character: a facility present, a tier, flags, a leaning, another villager present or absent. When met, a "Come to Withergate" topic appears under Discuss (decided). **How they agree is also per character** (`recruit.method`): they simply say yes; a chance roll (e.g. 50%, at most 3 asks, after which they are closed as a recruit unless content reopens it with a flag; decided F2); a quest that must be done; or an item you must bring. Living Quarters shows the roster, capacity, and each resident's condition status (green / amber / red).
 
 ### 8.4 Leaving
-Conditions are re-checked at each daily tick. If broken, the villager becomes Unhappy and a 3-day countdown starts (decided). A messenger tells you: "X is unhappy with your decisions. You have 3 days until they leave town forever." Sometimes it can be fixed, sometimes not; characters with this ability have special dialogue for their conditions (`recruit.yaml → unhappy`). If unresolved, they leave permanently and are removed from the game, with a farewell in person or as a notice at Quarters. **Alternatively you can escort them home from your Quarters**, which is treated as if you had never recruited them (question F3 covers cost and re-recruiting). Other villagers can react through flags and affinities.
+Conditions are re-checked at each daily tick. If broken, the villager becomes Unhappy and a 3-day countdown starts (decided). A messenger tells you: "X is unhappy with your decisions. You have 3 days until they leave town forever." Sometimes it can be fixed, sometimes not; characters with this ability have special dialogue for their conditions (`recruit.yaml → unhappy`). If unresolved, they leave permanently and are removed from the game, with a farewell in person or as a notice at Quarters. **Alternatively you can escort them home from your Quarters**, which is treated as if you had never recruited them: it costs the route's days (abstracted, no node map) and they can be recruited again from scratch (decided F3). Other villagers can react through flags and affinities.
 
 ### 8.5 Party
 Up to 2 companions per expedition, chosen from residents (proposed: residents only). Willingness depends on tier and energy. Companions appear in battle and cannot be targeted by enemies (decided). All provide passives; some also have one active battle ability the player triggers (decided). Energy: a max per character; −1 per node, −2 at night or in corruption; at 0 they withdraw and walk home safely (proposed), and you lose their benefits for the rest of the trip. At home, companion energy recovers over days rather than instantly (proposed +2 per day).
 
 ## 9. Withergate
 
-### 9.1 Fixed facilities
-- **Your Quarters:** the bed (save without sleeping, or sleep to a chosen phase and save; decided); loadout (weapon, powers, gift satchel); storage view; the build menu (proposed here so building works without a Town Hall).
-- **Living Quarters:** roster, capacity 10, condition status, dismiss (with consequences).
-- **General Store:** buy resources with gold; trade resource for resource at posted rates; stock and rates shift with your industry and town relations.
-- **Tavern (decided):** heart events, group dialog with specific characters, and other chances to build relationships. Drinking can leave you with a temporary `drunk` tag for a phase or two (`temp_tags` effect; mechanics in question F6). Scheduling a gathering a couple of days ahead and inviting NPCs for relationship points is on the list (27).
+Implemented in Phase 6 (`game/src/core/town.ts`).
+
+### 9.1 Fixed facilities and the shrine
+- **Your Quarters:** the desk opens the Quarters menu: **Bed** (save without sleeping, or sleep until morning and save), **Loadout** (one weapon from those you own, up to 4 combat powers held), **Gift satchel** (3 gifts taken from storage, giftable anywhere), **Storage** (resources and items), **Residents** (escort someone home, decided F3), and **Build**.
+- **Living Quarters:** roster with profession, tier, energy and condition status; capacity 10; the people you have met who could be recruited and whether they are ready to ask.
+- **General Store (decided H2):** a handful of different things on the shelves each week, drawn by weight from the resources and gift items in `economy.yaml`; every resident adds weight to what they make (`profile.yaml → store`). Each offer is priced at the base value times a random weekly markup, so the store is never a good deal, only sometimes a less bad one (Bazaar and Socialite bonuses soften the markup but never take it below value). Selling pays the sell rate of the base value. A morning notice announces the new stock each week.
+- **Tavern (decided):** activities from `tavern.yaml`: a drink (temporary `drunk` tag), an evening gathering with every resident (+friendship all round, costs the evening), listening to the room, and whatever else is written. Heart events and group scenes plug into the same list. Scheduling a gathering ahead is still on the list (27).
+- **The shrine** (decided): at the west end of town, where you manage your divinity: see faith and skill points, and unlock powers in the five per-axis trees (faith level, prerequisites, points), then choose which combat powers you hold. It never shows your leanings (F5).
+- **Morning notices:** anything that happened overnight (income, finished buildings, messenger warnings) is read out when you wake.
 
 ### 9.2 Optional facilities (choose 5 of 8)
-Barracks, Farm, Library, Town Hall, Bazaar, Hospital, Inn, Restaurant. Each has a cost, build days, workplace professions, and effects (proposed roles in [data-formats.md](../content/data-formats.md)). They are built into `facility_slot` entities on the Withergate map; the placeholder swaps to the building sprite when complete. Demolishing is possible but can break residents' conditions.
+Barracks, Farm, Library, Town Hall, Bazaar, Hospital, Inn, Restaurant. Each has a cost, build days, workplace professions, and effects (roles in [data-formats.md](../content/data-formats.md)). All five build slots are the same size and sit together east of town (decided). Walk up to a slot to build there, or use Build from Quarters; construction takes `build_days` (Engineers shorten it) and the finished facility appears in the slot with its name. A built facility can be entered for its effects, its workers, crafting (Bazaar), and demolition. Demolishing breaks the conditions of residents who worked there.
+
+### 9.2a Residents' conditions
+Every morning each resident's `leaves_if` conditions are checked. When one holds, a messenger says so at first light ("X is unhappy with your decisions. You have 3 days until they leave town forever.") and the character explains it in person before anything else when spoken to (`recruit.yaml → unhappy`). Fix it within 3 days and they settle; otherwise they leave for good. Escorting them home from Quarters costs the route's days and leaves them recruitable again. Residents without a Withergate schedule of their own stand at free places around town during the day: next to their workplace when they have one (the front of the built slot, or the door of the fixed facility), at a random place otherwise; they gather around the well in the evening and are home at night. No two residents share a place and the arrangement shifts daily (decided H3). Places are the map's NPC spots, slot fronts and building doors, so give Withergate plenty of `npc_spot`s in the editor.
 
 ### 9.3 Resources (proposed list)
-Gold, Wood, Stone, Ore, Food, Herbs, Cloth. Faith is not a resource (§3). Storage is unlimited in v1.
+Gold, Wood, Stone, Ore, Food, Herbs, Cloth. Faith is not a resource (§3). Storage is unlimited in v1. Income arrives every morning from facilities (`resource_income` effects) and residents' town benefits; Friends and Best Friends give 25% more (proposed).
 
 ### 9.4 Industry focus
 Emerges from facility and recruit choices: Farm + Restaurant + Bazaar makes a trade town; Barracks + Hospital a martial town; Library + Town Hall a diplomatic town. Focus changes store stock, visiting NPCs, town events, and renown sources.
@@ -189,16 +196,19 @@ Reach the destination, finish the last checkpoint, or choose "Head home" from a 
 
 ## 11. Combat
 
-- Turn-based, one enemy at a time; some encounters chain two or three enemies in sequence. The player is the only controlled actor; companions stand beside you.
-- Turn order by Speed each round. Speed ≥ 1.5× the enemy grants an extra action every other round (proposed).
-- **Actions:** Attack (weapon, deals its damage type) · Defend (halve incoming damage, +2 Grace) · Power (spend Grace) · Companion skill (one per companion per battle, if adopted) · Flee (Dexterity check; Explorer guarantees it).
-- **Damage (proposed):** `max(1, round(Attack × weapon.power × typeMultiplier × variance(0.9–1.1)) − Defense)`; critical hits ×1.5.
-- **Damage types and weaknesses:** weapons deal a type (proposed: blade, blunt, pierce, divine); enemies carry multipliers per type. Amanda defines the matrix and the weapon list.
-- **Powers:** cost Grace, scale with Divinity, may apply statuses from a small fixed set (bleed, stagger, inspired, rooted, burning).
-- **Enemy AI:** a weighted move list with simple conditions (low HP → desperate move).
-- **Rewards:** XP, resources into the haul, occasional gift items, tags for notable kills or spares.
-- **HP recovery without items:** full at home; Rest nodes restore 50% (proposed); a Doctor companion restores some per node; certain powers heal.
-- **Defeat (decided):** you die. Everything gathered on that expedition is lost. Every companion on it has their energy drained to 0 and cannot travel again until they recover (recovery time per character, proposed 3 days). You wake in your bed at Withergate a day later at half HP and half energy. Story bosses may have bespoke failure branches.
+Implemented in Phase 4 (`game/src/core/combat/battle.ts`); numbers are proposals until playtesting (question G1).
+
+- Turn-based, one enemy at a time (chains of two or three enemies come with expeditions). The player is the only controlled actor; companions stand beside you and cannot be targeted (decided).
+- **Turn order** by Speed each round, ties to the player. The faster side gets an extra action every even round when its Speed is at least 1.5× the other's. The player's Speed includes the weapon's `speed_mod`.
+- **Actions:** Attack (weapon, deals its damage type; bare hands are blunt ×0.7) · Defend (halve incoming damage until your next turn, +2 Grace) · Power (spend Grace) · Companion skill (each companion with an `active` benefit gets one use per battle) · Spare (decided G1: offered when the enemy is under 25% HP and its sheet has a `spare` block; a Charisma check with Divinity/2 added, since a god nobody knows is easy to ignore; success ends the fight with the sheet's `items` and tags and **no XP**; enemies without a `spare` block can never be spared) · Flee (Dexterity check against 10 + enemy Speed; an Explorer in the party always succeeds; impossible while rooted).
+- **Damage:** attack `max(1, round(Attack × weapon.power × typeMultiplier × variance(0.9–1.1) × crit) − Defense)`; a power `max(1, round(Divinity × 2 × power × typeMultiplier × variance × crit) − Defense/2)`; a companion skill uses the player's Attack in place of Divinity. Crit chance 5% + 1% per Luck point (×1.5 damage); the player dodges enemy attacks 2% per Dexterity point. Grace regenerates 1 per turn plus the weapon's `grace_regen`.
+- **Damage types:** weapons deal blade, blunt, pierce or divine; enemies carry a multiplier per type on their sheet (the matrix is content). Weapon `trait.on_hit` can inflict a status.
+- **Statuses** (a fixed set): bleed (2 damage per turn) and burning (3) tick at the start of the victim's action; stagger costs the next action; rooted stops the player fleeing and stops an enemy acting; attack up / defense up are +25%; inspired is +2 Attack and +1 Speed. Durations count down per action.
+- **Enemy AI:** a weighted move list; a move's `when` may use `hp_below` (the enemy's own HP fraction) and any other condition. Buff statuses go on the enemy, the rest on the player.
+- **Companions:** passives from `benefits.combat` (`intercept_hit` blocks N hits, `player_attack_up`, `player_defense_up`, `enemy_defense_down`, `grace_regen`, `crit_chance`, `status_resist`); one `active` skill per battle; barks on battle start, low HP, victory and defeat appear in the log.
+- **Rewards:** XP, the enemy's loot (into Withergate's stores until the haul exists, question G2), a gift item drop chance, `tags_on_kill`, and one hidden combat point per victory.
+- **HP recovery without items:** full at home; Rest nodes restore 50% (proposed); a Doctor companion restores some per node; heal powers restore `heal` + Divinity/2.
+- **Defeat (decided):** you die. Everything gathered on that expedition is lost. Every companion on it has their energy drained to 0 and cannot travel again until they recover (`recovery_days`, default 5). You wake in your bed at Withergate the next morning at half HP and half energy. A scripted fight with an `on_lose` branch handles its own consequences instead (the tutorial wolf leaves you at 5 HP for the messenger to find).
 
 ## 12. Caravan and resources
 
@@ -223,7 +233,8 @@ Saving happens at your bed (decided): choose **Save** (no time passes) or **Slee
 | Friendship thresholds | Enemy ≤ −40 · Disliked −39 to −1 · Stranger 0–9 · Acquaintance 10–39 · Friend 40–99 · Best Friend 100+ |
 | Chat | +1 friendship, first chat per day |
 | Discuss topic | +3 to +15 by topic, one-time |
-| Gift categories | loved +12 · liked +6 · neutral +1 · disliked −6 · hated −12; loved also +3 romance if romanceable |
+| Gift categories | loved +12 · liked +6 · neutral +1 · disliked −6 · hated −12; loved also +3 romance if romanceable; one gift per character per 5-day week |
+| Drunk | −2 Dexterity and Perception checks · +2 Charisma · no expeditions |
 | Flirt | neutral +3 · interest +4 · lover +1 friendship; first per day |
 | Romance thresholds | Interest 25 · Lover 75 |
 | Tag affinity | start bonus −15 to +15 · growth multiplier 0.5–1.5 on positive gains |

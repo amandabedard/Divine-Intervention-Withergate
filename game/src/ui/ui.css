@@ -92,6 +92,12 @@ button.on {
 button.subtle {
   opacity: 0.8;
 }
+button.focused {
+  border-color: var(--gold);
+  background: rgba(217, 182, 106, 0.2);
+  box-shadow: inset 3px 0 0 var(--gold);
+  opacity: 1;
+}
 kbd {
   display: inline-block;
   min-width: 16px;
@@ -327,13 +333,12 @@ input[type='number'] {
 /* talk menu */
 .talk {
   position: absolute;
-  left: 50%;
+  left: 24px;
   bottom: 40px;
-  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 48px);
 }
 .talk-bust {
   height: min(300px, 42vh);
@@ -381,12 +386,12 @@ input[type='number'] {
 /* dialog */
 .dialog {
   position: absolute;
-  left: 50%;
+  left: 24px;
+  right: 24px;
   bottom: 28px;
-  transform: translateX(-50%);
-  width: min(1100px, 94vw);
   display: flex;
   align-items: flex-end;
+  justify-content: flex-start;
   gap: 0;
   cursor: pointer;
 }
@@ -412,6 +417,8 @@ input[type='number'] {
 }
 .dialog .box {
   flex: 1;
+  max-width: 980px;
+  text-align: left;
   min-height: 150px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -461,6 +468,9 @@ input[type='number'] {
 }
 .choices button {
   font-size: 16px;
+  text-align: left;
+  align-self: flex-start;
+  min-width: 60%;
 }
 .roll {
   margin-top: 10px;
@@ -525,4 +535,172 @@ input[type='number'] {
 }
 .debug .villager .row {
   margin: 4px 0 0;
+}
+
+/* battle */
+.battle-ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.battle-ui > * {
+  pointer-events: auto;
+}
+.battle-ui .card {
+  padding: 12px 16px;
+  min-width: 220px;
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  color: var(--gold-2);
+  margin-bottom: 6px;
+}
+.enemy-card {
+  position: absolute;
+  top: 56px;
+  right: 24px;
+  width: 300px;
+}
+.party-cards {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.party-cards .companion {
+  min-width: 140px;
+}
+.party-cards .companion small {
+  display: block;
+}
+.battle-menu {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+}
+.battle-menu button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.battle-log {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 220px;
+  width: min(560px, 44vw);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+  font-size: 14px;
+  pointer-events: none;
+}
+.log-line {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  opacity: 0.55;
+  animation: rise 0.2s ease-out;
+}
+.log-line:last-child {
+  opacity: 1;
+  border-color: var(--gold);
+}
+.log-line.line {
+  font-style: italic;
+}
+.bar {
+  position: relative;
+  height: 16px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  margin: 4px 0;
+}
+.bar .fill {
+  height: 100%;
+  transition: width 0.35s ease-out;
+}
+.bar.hp .fill {
+  background: linear-gradient(90deg, #9ad36a, #6fae4a);
+}
+.bar.grace .fill {
+  background: linear-gradient(90deg, #f1d99a, #c9a24a);
+}
+.bar.enemy .fill {
+  background: linear-gradient(90deg, #e07a6a, #a8463a);
+}
+.bar span {
+  position: absolute;
+  inset: 0;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* town panels */
+.panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 48vh;
+  overflow: auto;
+  margin-top: 6px;
+}
+.panel-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.panel-list button small {
+  text-align: right;
+  max-width: 60%;
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  max-height: 34vh;
+  overflow: auto;
+  margin: 4px 0 8px;
+}
+.rows .kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+.rows h4 {
+  margin-top: 10px;
+}
+.status-ok {
+  color: var(--ok);
+}
+.status-bad {
+  color: var(--danger);
 }

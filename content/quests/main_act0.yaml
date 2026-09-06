@@ -1,0 +1,22 @@
+# Act 0: the fall. Started by the opening cutscene.
+id: main_act0
+title: "The Fall"
+type: main
+giver: none
+summary: "[PLACEHOLDER: Cast out of the heavens, you land in a glade at the edge of a kingdom at war.]"
+stages:
+  - id: forage
+    objective: "Gather something to eat from the glade."
+    complete_when: { any: [{ resource_min: { herbs: 1 } }, { resource_min: { wood: 21 } }] }
+  - id: fight
+    objective: "Something is watching from the eastern treeline."
+    complete_when: { flags: [first_fight_won] }
+  - id: messenger
+    objective: "Hear the rider out."
+    complete_when: { flags: [messenger_heard] }
+  - id: arrive
+    objective: "Follow the messenger to Withergate."
+    complete_when: { map: withergate }
+rewards: { faith: 5, xp: 20 }
+journal_notes:
+  arrive: "[PLACEHOLDER: Withergate. Four buildings and a great deal of horizon.]"

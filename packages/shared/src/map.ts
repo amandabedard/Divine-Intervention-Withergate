@@ -6,6 +6,12 @@ import { PHASES } from './ids.ts';
 // Map files are written by the editor (docs/tools/map-editor.md) and can be
 // hand-edited. Coordinates are in logical pixels at 1280x720.
 
+/**
+ * Characters stand this far below `ground_y` (inside the path band drawn under the
+ * ground line) rather than on the line itself. Shared by the game and the editor.
+ */
+export const WALK_LINE_OFFSET = 28;
+
 export const PlacementSchema = z.strictObject({
   /** Asset id from the manifest, or "placeholder". */
   asset: z.string().min(1),
@@ -29,7 +35,10 @@ export const EXIT_DIRECTIONS = ['left', 'right', 'up', 'down', 'door'] as const;
 export type ExitDirection = (typeof EXIT_DIRECTIONS)[number];
 
 export const InteractActionSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('open_ui'), ui: z.enum(['bed', 'living_quarters', 'general_store', 'tavern', 'build', 'notice_board']) }),
+  z.strictObject({
+    kind: z.literal('open_ui'),
+    ui: z.enum(['bed', 'quarters', 'living_quarters', 'general_store', 'tavern', 'build', 'shrine', 'notice_board']),
+  }),
   z.strictObject({ kind: z.literal('run_script'), script: z.string().min(1) }),
   z.strictObject({ kind: z.literal('sign'), text: z.string().min(1) }),
   z.strictObject({ kind: z.literal('forage'), resource: z.enum(['wood', 'stone', 'ore', 'food', 'herbs', 'cloth']), amount: z.tuple([z.number().int(), z.number().int()]), once_per_day: z.boolean().default(true) }),

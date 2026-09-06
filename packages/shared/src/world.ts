@@ -102,12 +102,17 @@ export const EnemySchema = z.strictObject({
   loot: z.partialRecord(z.enum(RESOURCES), z.number()).default({}),
   gift_drop: z.strictObject({ item: ID, chance: z.number().min(0).max(1) }).optional(),
   tags_on_kill: z.array(ID).default([]),
+  /**
+   * Sparing (decided G1): a Charisma check helped by Divinity, offered under a quarter HP.
+   * Success pays in items instead of XP. Leave `spare` out (or possible: false) for enemies
+   * that can never be spared.
+   */
   spare: z
     .strictObject({
       possible: z.boolean().default(true),
       check: z.strictObject({ stat: z.enum(STATS), dc: z.number().int() }).optional(),
+      items: z.record(ID, z.number().int().positive()).default({}),
       tags: z.array(ID).default([]),
-      xp: z.number().nonnegative().default(0),
     })
     .optional(),
   appears: z
@@ -283,6 +288,52 @@ export interface Cutscene {
   stage?: Stage;
   script: Script;
 }
+
+// Economy (content/economy.yaml) --------------------------------------------
+
+export const StoreStockSchema = z.strictObject({
+  /** Different things on the shelves each week. */
+  offers: z.number().int().min(1).default(5),
+  /** Weekly price multiplier range applied to the base value (the store never sells below it). */
+  markup: z.tuple([z.number().min(1), z.number().min(1)]).default([1.2, 1.8]),
+  /** Units of a resource in one offer; `default` covers resources not listed. */
+  units: z.record(z.string(), z.number().int().positive()).default({ default: 10 }),
+  /** Base chance of each resource or gift item showing up; residents add their own (profile.yaml → store). */
+  weights: z.record(z.string(), z.number().nonnegative()).default({}),
+});
+export type StoreStock = z.output<typeof StoreStockSchema>;
+
+export const EconomySchema = z.strictObject({
+  /** Base value of each resource, gold per unit. The store sells above it and buys below it. */
+  prices: z.partialRecord(z.enum(RESOURCES), z.number().positive()),
+  /** Fraction of the base value paid when selling. */
+  sell_rate: z.number().min(0).max(1).default(0.5),
+  /** Gift items the general store can stock, base value each. */
+  gifts: z.record(ID, z.number().positive()).default({}),
+  /** How the weekly shelves are rolled (decided H2). */
+  stock: StoreStockSchema.default({ offers: 5, markup: [1.2, 1.8], units: { default: 10 }, weights: {} }),
+});
+export type Economy = z.output<typeof EconomySchema>;
+
+// Tavern activities (content/tavern.yaml) -----------------------------------
+
+export const TavernActivitySchema = z.strictObject({
+  id: ID,
+  label: z.string().min(1),
+  description: z.string().default(''),
+  requires: ConditionSchema.optional(),
+  gold: z.number().nonnegative().default(0),
+  cost: z.enum(['none', 'phase']).default('none'),
+  once_per_day: z.boolean().default(true),
+  effects: RawEffectsSchema.optional(),
+  script: RawScriptSchema.optional(),
+});
+export type RawTavernActivity = z.output<typeof TavernActivitySchema>;
+export interface TavernActivity extends Omit<RawTavernActivity, 'effects' | 'script'> {
+  effects?: Effects;
+  script?: Script;
+}
+export const TavernFileSchema = z.strictObject({ activities: z.array(TavernActivitySchema) });
 
 // Progression --------------------------------------------------------------
 

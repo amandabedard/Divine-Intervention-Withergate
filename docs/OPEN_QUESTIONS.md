@@ -2,7 +2,7 @@
 
 Answer inline under each question (replace the `Answer:` line). Each question states the default that applies if you say nothing. I check this file at the start of every session and fold answers into the design docs.
 
-Groups A–E were answered on 2026-09-06 and are kept below as the decision log. Group F holds the follow-ups those answers raised.
+Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as the decision log. Group H holds the current follow-ups.
 
 ---
 
@@ -48,35 +48,44 @@ Groups A–E were answered on 2026-09-06 and are kept below as the decision log.
 | E6 | Start with the four named moods (neutral, happy, angry, sad). Every line has a reaction or defaults to neutral. |
 | E7 | No player bust; the player only picks options. |
 | E8 | Suspend save: yes. |
+| F1 | Skill tree: five small trees (one per axis), 1 skill point per faith level, no respec. Works for now. |
+| F2 | Recruit chance: after the last failed ask the character is closed as a recruit unless content reopens it with a flag. |
+| F3 | Escort home: costs the route's days (abstracted, no node map); the character can be recruited again from scratch. |
+| F4 | Corruption kills non-recruited characters that are not specially protected (`protected: true` on the character sheet). About a week before: "You can feel the corruption leaking into the mortal plane. Better do something about it before something terrible happens." When it happens, the messenger reports: "It appears we lost xyz in H town to the corruption last night…" |
+| F5 | The deity title is a **secret**. The player gets no hint of their leanings until the ending. |
+| F6 | `drunk`: −2 on Dexterity and Perception checks, +2 Charisma, cannot start an expedition. |
+| F7 | Gifts: **one per character per week** (5 days). Loved gifts +3 romance for romanceables, chat +1 friendship on the first chat of the day, first flirt per day counts. |
 
 ---
 
-## F. Follow-ups
+| G1 | Combat numbers as proposed, except **Spare**: a Charisma check helped by Divinity (a god nobody knows is easy to ignore), it pays in items instead of XP, and some enemies can never be spared. |
+| G2 | Battle loot goes to Withergate's stores until the haul exists. |
+| G3 | Corruption cadence: a full week (5 days) without clearing corruption brings the warning; if a dungeon has not been started within the next 3 days, someone is taken. |
+| — | All five build slots are the same (large) size and sit together east of town; the old fifth spot at the west end is now the **shrine**, where you manage your divinity (unlock and hold powers). |
+| H1 | Starting a corruption dungeon pauses the countdown (that day no longer counts as a day without fighting the corruption), but the clock only resets when the dungeon is finished. Dungeon expeditions are planned from the desk in your quarters. |
+| H2 | Store stock is limited and weighted by who lives in Withergate: each villager profile adds weight to particular items showing up. Prices are always above the base value and change weekly, so the store is never a good deal, only sometimes a less bad one. |
+| H3 | Residents whose workplace is a fixed facility, or who have none, stand at free spots around town, nearer their work when possible; two residents never share a spot. Interiors for the fixed buildings can come later. |
 
-**F1. Skill tree shape.** One tree per axis (five trees), or one shared tree where each node feeds an axis? How many skill points per faith level (default 1), and can points be respecced?
-Default: five small trees, 1 point per faith level, no respec.
-Answer:
+---
 
-**F2. Recruit chance failures.** After the last failed ask ("can only ask 3 times"), is the character gone for good as a recruit, or does a quest or gift reopen it?
-Default: closed for good unless content reopens it with a flag.
-Answer:
+## H. Follow-ups
 
-**F3. Escort home.** Does escorting a villager home cost travel days (a short expedition to their town) or happen instantly from Quarters? Can they be recruited again later?
-Default: costs the route's days (abstracted, no node map); recruitable again from scratch.
-Answer:
+**H1. Corruption dungeons.** "Clearing corruption" means finishing a corruption map (a dungeon that takes days). Is starting one enough to reset the warning clock, or only finishing it? Do dungeons appear as expedition checkpoints, or as their own destinations?
+Default: starting one pauses the clock, finishing resets it; they are their own destinations on the expedition map.
+Answer: You have to finish it, but starting one is enough to pause the countdown (the day does not count as a day of corruption, because you have technically fought it). Dungeon expeditions can be planned from your desk. *(Folded into the decision log; built with Phase 7/8.)*
 
-**F4. Corruption kills.** Which characters are at risk (unnamed NPCs only, or named non-recruited villagers too)? Is there a warning window like the unhappiness one?
-Default: named non-recruited villagers are at risk; a rumour warns one day ahead; recruiting them protects them.
-Answer:
+**H2. Store stock.** The general store currently sells every resource plus a few gifts from `economy.yaml`. Should stock be limited per day, or change with the town's industry, from the start?
+Default: unlimited until Phase 8 adds industry.
+Answer: Stock is limited and based on the characters in town, who each add weight to specific items showing up. Things are always more expensive in the store, but the price varies weekly: you never get a good deal, but you can get a slightly less worse one. *(Folded into the decision log and the store; see `docs/content/villager-format.md` → `store` and `docs/content/data-formats.md` → `economy.yaml`.)*
 
-**F5. Deity title text.** With five axes, how should the generated title read? Leading axis only ("Deity of Discovery"), or leading plus secondary ("Deity of Discovery and Friendship")? Do notable tags add an epithet?
-Default: leading axis; secondary appended when within 25% of the leader; one epithet from the strongest tag.
-Answer:
+**H3. Fixed-facility workplaces.** Residents whose workplace is a fixed facility (tavern, store) stand outside its door during the day. Good enough, or should the fixed buildings get interiors and spots?
+Default: outside the door for now.
+Answer: They stand at random spaces in town for now, nearer their work when possible; if you hire ten farmers they cannot all stand in the same spot. *(Folded into the schedule rules.)*
 
-**F6. Drunk tag.** Beyond dialog reactions, does `drunk` change anything mechanical (check penalties, better tavern outcomes, cannot leave town)?
-Default: −2 on Dexterity and Perception checks, +2 Charisma, cannot start an expedition.
-Answer:
+## I. Asset packs (2026-09-07)
 
-**F7. Quick facts I assumed in code.** Gifts: one per character per day; loved gifts also give +3 romance to romanceable characters. Chat: +1 friendship on the first chat of the day. Flirt: only the first flirt per day has an effect. Say so if any of these should change.
-Default: as stated.
+The first set (seven 768px pixel-art packs: town, gothic, farm, dreamland, rome, steampunk, forest; 5,424 cut pieces) was **removed** the same day on Amanda's decision, together with the twelve placements that used it. The library now holds seven craftpix packs (`assets/README.md`): five cartoon platformer tilesets (`workshop`, `tailor`, `market`, `village`, `farm`; 120 ready-made pieces each: two parallax background layers, modular building parts, props, thirteen 128px ground tiles) and two 16px top-down pixel-art packs (`farm_topdown`, `home_topdown`; objects and tilesets cut with the sheet cutter's `objects` and `grid` modes; animation strips and the water-detail tileset left out). 1,881 pieces in all. The repository stays private because the craftpix licence forbids redistributing the files.
+
+**I1. Top-down art in a side-scroller.** The two top-down packs are drawn from above at 16px, next to 128px cartoon platformer art. Their props (plants, furniture, animals' houses) can pass as decoration at 2x–4x scale; their ground and water tiles will look odd on a side view. Keep them as an option, or drop them to keep the tile tab short?
+Default: keep.
 Answer:

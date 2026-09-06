@@ -1,10 +1,10 @@
-import { DOMAIN_LABELS, PHASES, levelForXp } from '@withergate/shared';
+import { DOMAIN_MILESTONE_TAGS, PHASES, levelForXp } from '@withergate/shared';
 import type { Domain, Effects, Phase } from '@withergate/shared';
 import { relationKey } from './conditions';
 import type { Ctx } from './ctx';
 import { advanceQuest, completeQuest, failQuest, startQuest } from './quests';
 import { changeFriendship, changeRomance, introduce, setRomanceState } from './relationships';
-import { faithLevel, maxEnergy, maxGrace, maxHp, phaseAbs, villagerState } from './state';
+import { faithLevel, maxEnergy, maxGrace, maxHp, phaseAbs, residents, villagerState } from './state';
 import { advancePhases, sleepUntilMorning } from './time';
 
 /** Apply an effects block. Requests that need the world or UI are pushed to ctx.requests. */
@@ -23,6 +23,7 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   };
 
   perVillager(e.friendship, (id, n) => changeFriendship(ctx, id, n));
+  if (e.friendship_residents) for (const id of residents(state)) changeFriendship(ctx, id, e.friendship_residents);
   perVillager(e.romance, (id, n) => changeRomance(ctx, id, n));
   if (e.set_tier) {
     for (const [id, tier] of Object.entries(e.set_tier)) {
@@ -59,13 +60,21 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
       const key = d as Domain;
       const before = p.domainPoints[key];
       p.domainPoints[key] = Math.max(0, before + (n ?? 0));
+      // The title is a secret (decided F5): crossing a milestone grants a hidden tag, silently.
       const milestone = content.progression.domain_milestone;
       if (before < milestone && p.domainPoints[key] >= milestone) {
-        ctx.notify(`Your deeds speak of ${DOMAIN_LABELS[key]}.`);
+        const tag = DOMAIN_MILESTONE_TAGS[key];
+        if (!p.tags.includes(tag)) p.tags.push(tag);
       }
     }
   }
   if (e.faith) grantFaith(ctx, e.faith);
+  if (e.skill_points) p.skillPoints = Math.max(0, p.skillPoints + e.skill_points);
+  for (const w of e.weapons ?? []) {
+    if (!content.weapons[w] || p.weapons.includes(w)) continue;
+    p.weapons.push(w);
+    ctx.notify(`Received ${content.weapons[w]!.name}.`);
+  }
   if (e.unlock_power && !p.powers.includes(e.unlock_power)) {
     p.powers.push(e.unlock_power);
     const power = content.powers[e.unlock_power];
@@ -111,10 +120,16 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   if (e.recruit) recruit(ctx, e.recruit);
   if (e.dismiss) dismiss(ctx, e.dismiss);
   if (e.build) {
+    const map = content.maps.withergate;
+    const taken = new Set([...Object.keys(state.town.slots), ...state.town.buildQueue.map((b) => b.slot)]);
+    const slot = map ? map.entities.find((en) => en.type === 'facility_slot' && !taken.has(en.id))?.id ?? '' : '';
     if (e.build.instant) {
       if (!state.town.facilities.includes(e.build.facility)) state.town.facilities.push(e.build.facility);
+      if (slot) state.town.slots[slot] = e.build.facility;
+      ctx.requests.push({ kind: 'town_changed' });
     } else if (!state.town.buildQueue.some((b) => b.facility === e.build!.facility)) {
-      state.town.buildQueue.push({ facility: e.build.facility, daysLeft: content.facilities[e.build.facility]?.build_days ?? 1 });
+      state.town.buildQueue.push({ facility: e.build.facility, slot, daysLeft: content.facilities[e.build.facility]?.build_days ?? 1 });
+      ctx.requests.push({ kind: 'town_changed' });
     }
   }
   if (e.time !== undefined) {

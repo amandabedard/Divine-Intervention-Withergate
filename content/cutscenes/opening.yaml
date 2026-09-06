@@ -1,0 +1,26 @@
+# The opening. Plays once, right after character creation, on the landing glade.
+# Every line is a placeholder for Amanda's script; the beats and effects are the contract.
+id: opening
+stage:
+  map: landing_glade
+  place: { player: glade_center }
+script:
+  - narrate: "[PLACEHOLDER: The heavens are bright and bored. A tribunal of gods that have never once agreed on anything agrees, today, about you.]"
+  - narrate: "[PLACEHOLDER: Half-blood. Deity of nothing in particular. Not worth a domain, not worth a war. Worth a fall.]"
+  - narrate: "[PLACEHOLDER: The floor of heaven opens under {name}.]"
+  - fade: out
+  - wait: 0.6
+  - fade: in
+  - narrate: "[PLACEHOLDER: Grass. Smoke. The taste of iron. You are lying in a glade in the shape of yourself.]"
+  - choice:
+      - text: "[Stand up slowly.]"
+        effects: { tags: [cautious] }
+        then:
+          - narrate: "[PLACEHOLDER: Everything works. Everything hurts. You are, apparently, still a little bit a god.]"
+      - text: "[Stand up and dust yourself off like it was your idea.]"
+        effects: { tags: [cool], domain_points: { pleasure: 1 } }
+        then:
+          - narrate: "[PLACEHOLDER: Nobody saw. You decide that counts.]"
+  - narrate: "[PLACEHOLDER: Something rustles in the treeline to the east. West, the glade smells of herbs and deadfall. You are hungry in a way gods are not supposed to be.]"
+  - effects: { quest_start: main_act0, flags: { opening_done: true } }
+  - end: scene
