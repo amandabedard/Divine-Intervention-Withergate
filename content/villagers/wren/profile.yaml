@@ -22,6 +22,9 @@ recruit:
 
 energy: 5
 
+# While she lives here, food shows up at the general store more often (added to economy.yaml → stock.weights).
+store: { food: 4 }
+
 benefits:
   town:
     - { type: resource_income, resource: food, amount: 3 }

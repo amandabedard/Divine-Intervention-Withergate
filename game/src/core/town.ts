@@ -1,9 +1,10 @@
 // Withergate: facilities, residents, the store, the tavern, the shrine and crafting.
 // Pure state + rules; the session wires them to panels. See docs/design/gdd.md §9.
-import { FIXED_FACILITIES, RESOURCES, mapEntities, tierForPoints } from '@withergate/shared';
+import { DAYS_PER_WEEK, FIXED_FACILITIES, RESOURCES, mapEntities, tierForPoints } from '@withergate/shared';
 import type { Condition, Facility, Resource, Script, TavernActivity, Tier } from '@withergate/shared';
 import { evaluate } from './conditions';
 import type { Ctx } from './ctx';
+import type { StoreOffer } from './state';
 import { applyEffects } from './effects';
 import { TIER_LABELS } from './relationships';
 import { faithLevel, residents, townBonuses, villagerState } from './state';
@@ -316,44 +317,87 @@ export function storeRateMod(ctx: Ctx): number {
   return Math.max(0.5, 1 - pct / 100);
 }
 
-export function buyPrice(ctx: Ctx, resource: Resource, n = 1): number {
-  const price = ctx.content.economy.prices[resource] ?? 0;
-  return Math.ceil(price * n * storeRateMod(ctx));
+export const weekOf = (day: number): number => Math.floor((day - 1) / DAYS_PER_WEEK) + 1;
+
+const isResource = (item: string): item is Resource => (RESOURCES as readonly string[]).includes(item);
+
+/** Base value of a resource or gift item in gold; 0 if the store never deals in it. */
+export function baseValue(ctx: Ctx, item: string): number {
+  const eco = ctx.content.economy;
+  return (isResource(item) ? eco.prices[item] : eco.gifts[item]) ?? 0;
+}
+
+/** Everything the store could put on its shelves, weighted by economy.yaml and by who lives here. */
+function storeCatalogue(ctx: Ctx): { item: string; weight: number }[] {
+  const eco = ctx.content.economy;
+  const weights: Record<string, number> = {};
+  for (const r of RESOURCES) if (r !== 'gold' && eco.prices[r]) weights[r] = eco.stock.weights[r] ?? 1;
+  for (const g of Object.keys(eco.gifts)) weights[g] = eco.stock.weights[g] ?? 1;
+  for (const id of residents(ctx.state)) {
+    for (const [item, w] of Object.entries(ctx.content.villagers[id]?.profile.store ?? {})) {
+      if (!baseValue(ctx, item)) continue;
+      weights[item] = (weights[item] ?? 0) + w;
+    }
+  }
+  return Object.entries(weights)
+    .filter(([, w]) => w > 0)
+    .map(([item, weight]) => ({ item, weight }));
+}
+
+/**
+ * Roll this week's shelves (decided H2): a handful of different things, drawn by
+ * weight, each priced at the base value times a random weekly markup. Bazaar and
+ * Socialite discounts soften the markup but the store never sells below value.
+ */
+export function rollStore(ctx: Ctx): void {
+  const eco = ctx.content.economy;
+  const pool = storeCatalogue(ctx);
+  const rate = storeRateMod(ctx);
+  const [lo, hi] = eco.stock.markup;
+  const offers: StoreOffer[] = [];
+  for (let i = 0; i < eco.stock.offers && pool.length; i += 1) {
+    const pick = ctx.rng.weighted(pool, (p) => p.weight);
+    pool.splice(pool.indexOf(pick), 1);
+    const base = baseValue(ctx, pick.item);
+    const markup = lo + ctx.rng.next() * (hi - lo);
+    const price = Math.max(Math.ceil(base * 1.05), Math.ceil(base * markup * rate));
+    const qty = isResource(pick.item) ? (eco.stock.units[pick.item] ?? eco.stock.units.default ?? 10) : ctx.rng.int(1, 2);
+    offers.push({ item: pick.item, qty, price });
+  }
+  ctx.state.town.store = { week: weekOf(ctx.state.time.day), offers };
+}
+
+/** This week's offers, rolled on first sight of a new week. */
+export function storeOffers(ctx: Ctx): StoreOffer[] {
+  const store = ctx.state.town.store;
+  if (!store || store.week !== weekOf(ctx.state.time.day)) rollStore(ctx);
+  return ctx.state.town.store!.offers;
+}
+
+/** Buy up to n of an offer; resources go to the town's stocks, gifts to storage. */
+export function buyOffer(ctx: Ctx, index: number, n: number): string | null {
+  const offer = storeOffers(ctx)[index];
+  if (!offer) return 'The store does not sell that.';
+  if (offer.qty <= 0) return 'Sold out until next week.';
+  const count = Math.max(1, Math.min(n, offer.qty));
+  const cost = offer.price * count;
+  if (ctx.state.town.resources.gold < cost) return `Not enough gold (${cost} needed).`;
+  ctx.state.town.resources.gold -= cost;
+  offer.qty -= count;
+  if (isResource(offer.item)) ctx.state.town.resources[offer.item] += count;
+  else ctx.state.town.storage[offer.item] = (ctx.state.town.storage[offer.item] ?? 0) + count;
+  return null;
 }
 
 export function sellPrice(ctx: Ctx, resource: Resource, n = 1): number {
   const price = ctx.content.economy.prices[resource] ?? 0;
   return Math.floor(price * ctx.content.economy.sell_rate * n);
 }
-
-export function buy(ctx: Ctx, resource: Resource, n: number): string | null {
-  if (resource === 'gold' || !(ctx.content.economy.prices[resource] ?? 0)) return 'The store does not sell that.';
-  const cost = buyPrice(ctx, resource, n);
-  if (ctx.state.town.resources.gold < cost) return `Not enough gold (${cost} needed).`;
-  ctx.state.town.resources.gold -= cost;
-  ctx.state.town.resources[resource] += n;
-  return null;
-}
-
 export function sell(ctx: Ctx, resource: Resource, n: number): string | null {
   if (resource === 'gold') return 'You cannot sell gold.';
   if ((ctx.state.town.resources[resource] ?? 0) < n) return `You do not have ${n} ${resource}.`;
   ctx.state.town.resources[resource] -= n;
   ctx.state.town.resources.gold += sellPrice(ctx, resource, n);
-  return null;
-}
-
-export function giftPrice(ctx: Ctx, item: string): number | null {
-  const base = ctx.content.economy.gifts[item];
-  return base ? Math.ceil(base * storeRateMod(ctx)) : null;
-}
-
-export function buyGift(ctx: Ctx, item: string): string | null {
-  const price = giftPrice(ctx, item);
-  if (price === null) return 'The store does not stock that.';
-  if (ctx.state.town.resources.gold < price) return `Not enough gold (${price} needed).`;
-  ctx.state.town.resources.gold -= price;
-  ctx.state.town.storage[item] = (ctx.state.town.storage[item] ?? 0) + 1;
   return null;
 }
 

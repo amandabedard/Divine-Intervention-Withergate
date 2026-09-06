@@ -228,10 +228,17 @@ Effects the game applies today: `resource_income` (resource, amount per day), `s
 `content/economy.yaml`
 
 ```yaml
-prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }   # gold per unit at the general store
-sell_rate: 0.5                                                          # fraction of the buy price paid when selling
-gifts: { whetstone: 8, hearty_stew: 5 }                                 # gift items the store stocks, gold each
+prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }   # base value of each resource, gold per unit
+sell_rate: 0.5                                                          # fraction of the base value paid when selling
+gifts: { whetstone: 8, hearty_stew: 5 }                                 # gift items the store can stock, base value each
+stock:                                                                  # the weekly shelves (decided H2)
+  offers: 5                        # different things on the shelves each week
+  markup: [1.2, 1.8]               # each offer is priced at base × a random markup in this range; never below base
+  units: { default: 10, ore: 5 }   # units of a resource in one offer
+  weights: { wood: 3, food: 3, whetstone: 1 }   # base chance of showing up (unlisted = 1); residents add theirs
 ```
+
+The store is never a good deal: prices sit above the base value even with Bazaar and Socialite discounts, and change every week, so the best you get is a less bad week. Which things appear depends on who lives in Withergate: each villager's `store:` map in `profile.yaml` adds weight to the resources or gift items they make.
 
 `content/tavern.yaml` lists what you can do at the tavern. Each activity is a menu entry:
 

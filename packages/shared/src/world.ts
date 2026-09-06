@@ -291,13 +291,27 @@ export interface Cutscene {
 
 // Economy (content/economy.yaml) --------------------------------------------
 
+export const StoreStockSchema = z.strictObject({
+  /** Different things on the shelves each week. */
+  offers: z.number().int().min(1).default(5),
+  /** Weekly price multiplier range applied to the base value (the store never sells below it). */
+  markup: z.tuple([z.number().min(1), z.number().min(1)]).default([1.2, 1.8]),
+  /** Units of a resource in one offer; `default` covers resources not listed. */
+  units: z.record(z.string(), z.number().int().positive()).default({ default: 10 }),
+  /** Base chance of each resource or gift item showing up; residents add their own (profile.yaml → store). */
+  weights: z.record(z.string(), z.number().nonnegative()).default({}),
+});
+export type StoreStock = z.output<typeof StoreStockSchema>;
+
 export const EconomySchema = z.strictObject({
-  /** Gold per unit at the general store. */
+  /** Base value of each resource, gold per unit. The store sells above it and buys below it. */
   prices: z.partialRecord(z.enum(RESOURCES), z.number().positive()),
-  /** Fraction of the buy price paid when selling. */
+  /** Fraction of the base value paid when selling. */
   sell_rate: z.number().min(0).max(1).default(0.5),
-  /** Gift items the general store stocks, gold each. */
+  /** Gift items the general store can stock, base value each. */
   gifts: z.record(ID, z.number().positive()).default({}),
+  /** How the weekly shelves are rolled (decided H2). */
+  stock: StoreStockSchema.default({ offers: 5, markup: [1.2, 1.8], units: { default: 10 }, weights: {} }),
 });
 export type Economy = z.output<typeof EconomySchema>;
 

@@ -75,6 +75,16 @@ export interface QuestState {
   startedDay: number;
 }
 
+/** One thing on the general store's shelves this week. */
+export interface StoreOffer {
+  /** A resource id or a gift item id. */
+  item: string;
+  /** Units left this week. */
+  qty: number;
+  /** Gold each; always above the base value. */
+  price: number;
+}
+
 export interface GameState {
   version: number;
   meta: { seed: number; created: string; playedPhases: number };
@@ -89,6 +99,8 @@ export interface GameState {
     slots: Record<string, string>;
     resources: Record<Resource, number>;
     storage: Record<string, number>;
+    /** This week's shelves at the general store (rolled by town.ts; missing in older saves). */
+    store?: { week: number; offers: StoreOffer[] };
   };
   villagers: Record<string, VillagerState>;
   quests: Record<string, QuestState>;
@@ -165,6 +177,7 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
       resources: { ...(Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>), gold: 50, wood: 20 },
       // DEV DEFAULT: two sample gifts so the gift menu can be tested before storage exists.
       storage: { whetstone: 1, hearty_stew: 1 },
+      store: { week: 0, offers: [] },
     },
     villagers: {},
     quests: {},

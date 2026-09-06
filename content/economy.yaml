@@ -1,6 +1,15 @@
-# General store prices (gold per unit) and what it stocks. Bazaar and Socialite bonuses discount buys.
+# The general store. `prices` and `gifts` are base values in gold: the store always sells above them
+# (a random weekly markup; Bazaar and Socialite bonuses soften it) and buys at `sell_rate` of them.
 prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }
 sell_rate: 0.5
 gifts:
   whetstone: 8
   hearty_stew: 5
+
+# The shelves change every week (decided H2): `offers` different things, drawn by `weights`
+# (residents add their own weights through profile.yaml → store), resources in lots of `units`.
+stock:
+  offers: 5
+  markup: [1.2, 1.8]
+  units: { default: 10, ore: 5 }
+  weights: { wood: 3, stone: 2, food: 3, herbs: 2, cloth: 1, ore: 1, whetstone: 1, hearty_stew: 1 }
