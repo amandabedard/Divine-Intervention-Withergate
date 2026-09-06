@@ -6,7 +6,21 @@ import { Rng } from '../core/rng';
 import type { GameState } from '../core/state';
 import { bus } from './bus';
 
-export type PanelKind = 'bed' | 'living_quarters' | 'general_store' | 'tavern' | 'build' | 'notice_board';
+export type PanelKind =
+  | 'quarters'
+  | 'bed'
+  | 'loadout'
+  | 'satchel'
+  | 'storage'
+  | 'residents'
+  | 'living_quarters'
+  | 'general_store'
+  | 'tavern'
+  | 'build'
+  | 'shrine'
+  | 'facility'
+  | 'craft'
+  | 'notice_board';
 export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle';
 export type TalkView = 'menu' | 'topics' | 'gifts';
 
@@ -52,6 +66,8 @@ export interface Toast {
 export interface UiState {
   mode: UiMode;
   panel: PanelKind | null;
+  /** Extra context for a panel: a slot id for build, a facility id for facility/craft. */
+  panelArg: string | null;
   talk: TalkState | null;
   line: DialogLine | null;
   choices: DialogChoice[] | null;
@@ -75,6 +91,7 @@ function initialUi(): UiState {
   return {
     mode: 'boot',
     panel: null,
+    panelArg: null,
     talk: null,
     line: null,
     choices: null,

@@ -11,6 +11,6 @@ moves:
   - { id: frenzy, name: Frenzy, weight: 2, power: 1.4, when: { hp_below: 0.4 } }
 xp: 12
 loot: { food: 2 }
-spare: { possible: true, check: { stat: perception, dc: 12 }, tags: [merciful], xp: 8 }
+spare: { possible: true, check: { stat: charisma, dc: 12 }, items: { hollow_fang: 1 }, tags: [merciful] }
 tags_on_kill: []
 appears: { biomes: [forest, corrupted], time: [evening, night] }

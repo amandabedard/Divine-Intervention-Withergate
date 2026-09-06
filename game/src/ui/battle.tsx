@@ -199,7 +199,7 @@ function describe(ev: BattleEvent, nameOf: (id: string) => string): string {
         const drops = ev.drops.length ? `, found ${ev.drops.join(', ')}` : '';
         return `Victory. +${ev.xp} XP${loot ? `, ${loot}` : ''}${drops}.`;
       }
-      if (ev.result === 'spared') return `You let it go. +${ev.xp} XP.`;
+      if (ev.result === 'spared') return `You let it go.${ev.drops.length ? ` It leaves behind ${ev.drops.map((d) => d.replace(/_/g, ' ')).join(', ')}.` : ''}`;
       if (ev.result === 'fled') return 'You escape.';
       return `You fall to ${nameOf('enemy')}.`;
     }

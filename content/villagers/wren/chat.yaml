@@ -1,0 +1,10 @@
+# SAMPLE chat.
+pools:
+  - when: { tier: stranger }
+    lines:
+      - "[PLACEHOLDER: Wren looks at the empty fields the way other people look at a full plate.] (sample)"
+      - "[PLACEHOLDER: Good dirt here. Nobody's turning it.] (sample)"
+  - when: { tier: acquaintance+ }
+    lines:
+      - "[PLACEHOLDER: Give me a plot and a season and I'll give you a harvest.] (sample)"
+      - wren: "[PLACEHOLDER: Rain's coming. Good.] (sample)"

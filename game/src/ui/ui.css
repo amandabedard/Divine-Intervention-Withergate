@@ -660,3 +660,47 @@ input[type='number'] {
   gap: 4px;
   margin-top: 4px;
 }
+
+/* town panels */
+.panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 48vh;
+  overflow: auto;
+  margin-top: 6px;
+}
+.panel-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.panel-list button small {
+  text-align: right;
+  max-width: 60%;
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  max-height: 34vh;
+  overflow: auto;
+  margin: 4px 0 8px;
+}
+.rows .kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+.rows h4 {
+  margin-top: 10px;
+}
+.status-ok {
+  color: var(--ok);
+}
+.status-bad {
+  color: var(--danger);
+}

@@ -92,7 +92,7 @@ Entity types and their properties:
 | `spawn` | id, x, y, facing | where the player appears when arriving |
 | `exit` | id, rect, direction (left/right/up/down/door), to: { map, spawn }, requires? | arrows appear near it; door exits show `!` |
 | `npc_spot` | id, x, y, facing | schedule targets and stage-direction targets |
-| `interactable` | id, rect, prompt icon, action: { kind: open_ui | run_script | forage | sign | facility, ... } | `!` above the player when near |
+| `interactable` | id, rect, prompt icon, action: { kind: open_ui | run_script | forage | sign | facility, ... } | `!` above the player when near. `open_ui` targets: bed, quarters, living_quarters, general_store, tavern, build, shrine, notice_board |
 | `trigger` | id, rect, once, action: { run_script | start_event | effects } | invisible zones |
 | `facility_slot` | id, x, y, size | Withergate build slots; shows the placeholder or the built facility |
 | `camera_bounds` | rect | optional clamp |

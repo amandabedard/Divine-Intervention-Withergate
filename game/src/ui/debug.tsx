@@ -112,8 +112,10 @@ export function DebugPanel({ snap }: { snap: Snapshot }) {
             <div className="muted">{DOMAINS.map((d) => `${d} ${s.player.domainPoints[d]}`).join(' · ')}</div>
             <div className="row">
               <button onClick={() => session.debug.grant('faith', 10)}>+10 faith</button>
+              <button onClick={() => session.debug.grant('skill', 1)}>+1 skill pt</button>
               <button onClick={() => session.debug.grant('xp', 50)}>+50 xp</button>
-              <button onClick={() => session.debug.grant('gold', 50)}>+50 gold</button>
+              <button onClick={() => session.debug.grant('gold', 100)}>+100 gold</button>
+              <button onClick={() => session.debug.grant('materials', 50)}>+50 materials</button>
             </div>
             <div className="row wrap">
               <span>Tags:</span>

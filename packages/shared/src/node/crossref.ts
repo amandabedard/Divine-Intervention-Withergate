@@ -94,6 +94,7 @@ export function crossCheck(
       else if (to && !bundle.quests[id]!.stages.some((s) => s.id === to)) err(where, `effect quest_advance: quest "${id}" has no stage "${to}"`);
     }
     for (const id of Object.keys(e.items ?? {})) if (!has.item(id)) err(where, `effect items: unknown item "${id}"`);
+    for (const id of e.weapons ?? []) if (!(id in bundle.weapons)) err(where, `effect weapons: unknown weapon "${id}"`);
     for (const key of ['recruit', 'dismiss'] as const) {
       const id = e[key];
       if (id && !has.villager(id)) err(where, `effect ${key}: unknown character "${id}"`);
@@ -292,6 +293,7 @@ export function crossCheck(
   for (const e of Object.values(bundle.enemies)) {
     const f = `enemies/${e.id}.yaml`;
     if (e.gift_drop && !has.item(e.gift_drop.item)) err(f, `gift_drop: unknown item "${e.gift_drop.item}"`);
+    for (const id of Object.keys(e.spare?.items ?? {})) if (!has.item(id)) err(f, `spare.items: unknown item "${id}"`);
     for (const m of [...e.moves, ...(e.phases ?? []).flatMap((p) => p.moves)]) checkCondition(m.when, f);
     if (e.intro) checkScript(e.intro.nodes, { file: f });
     if (e.defeat) checkScript(e.defeat.nodes, { file: f });
@@ -357,6 +359,14 @@ export function crossCheck(
       for (const id of ids) if (!has.encounter(id)) warn(f, `region "${r.id}": checkpoint "${id}" has no encounter yet`);
     }
     for (const b of r.biomes) if (!(b in bundle.biomes)) warn(f, `region "${r.id}": biome "${b}" is not defined in biomes.yaml`);
+  }
+
+  // --- economy and tavern --------------------------------------------------
+  for (const id of Object.keys(bundle.economy.gifts)) if (!has.item(id)) err('economy.yaml', `gifts: unknown item "${id}"`);
+  for (const a of bundle.tavern) {
+    checkCondition(a.requires, 'tavern.yaml');
+    checkEffects(a.effects, 'tavern.yaml');
+    if (a.script) checkScript(a.script.nodes, { file: 'tavern.yaml' });
   }
 
   // --- items and powers ----------------------------------------------------

@@ -30,16 +30,38 @@ export function whereIs(ctx: Ctx, id: string): Placement | null {
     }
   }
 
-  const table = v.resident ? profile.schedule?.withergate ?? defaultResidentSchedule(ctx) : profile.schedule?.home;
+  if (v.resident && !profile.schedule?.withergate) return residentPlacement(ctx, id);
+  const table = v.resident ? profile.schedule?.withergate : profile.schedule?.home;
   const ref = table?.[phase];
   if (!ref || ref.map === 'none') return null;
   return resolve(ctx, ref.map, ref.spot);
 }
 
-function defaultResidentSchedule(ctx: Ctx): Record<string, { map: string; spot?: string }> {
-  const map = ctx.content.maps.withergate ? 'withergate' : Object.keys(ctx.content.maps)[0] ?? 'withergate';
-  const spot = mapEntities(ctx.content.maps[map]!, 'npc_spot')[0]?.id;
-  return { morning: { map, spot }, afternoon: { map, spot }, evening: { map, spot } };
+/**
+ * Where a resident without an explicit Withergate schedule stands: at their workplace while
+ * it exists (a built slot, or the door of a fixed facility), the square otherwise, the well
+ * in the evening, and home at night.
+ */
+function residentPlacement(ctx: Ctx, id: string): Placement | null {
+  const mapId = 'withergate';
+  const map = ctx.content.maps[mapId];
+  if (!map) return null;
+  const phase = ctx.state.time.phase;
+  if (phase === 'night') return null;
+  const spots = mapEntities(map, 'npc_spot');
+  const spotByName = (name: string) => spots.find((s) => s.id === name);
+  const at = (s: { id: string; x: number; y: number; facing: 'left' | 'right' } | undefined): Placement | null =>
+    s ? { map: mapId, spot: s.id, facing: s.facing, x: s.x, y: s.y } : null;
+  if (phase === 'evening') return at(spotByName('well') ?? spots[0]);
+  const workplace = ctx.content.villagers[id]?.profile.recruit?.workplace;
+  if (workplace && workplace !== 'none') {
+    const slotId = Object.entries(ctx.state.town.slots).find(([, f]) => f === workplace)?.[0];
+    const slot = slotId ? mapEntities(map, 'facility_slot').find((s) => s.id === slotId) : undefined;
+    if (slot) return { map: mapId, spot: `slot:${slot.id}`, facing: 'left', x: slot.x + 60, y: slot.y };
+    const door = map.entities.find((e) => (e.type === 'interactable' || e.type === 'exit') && e.id.startsWith(workplace));
+    if (door && 'w' in door) return { map: mapId, spot: `door:${door.id}`, facing: 'left', x: door.x + door.w + 50, y: map.ground_y };
+  }
+  return at(spotByName('square') ?? spots[0]);
 }
 
 function resolve(ctx: Ctx, map: string, spot: string | undefined): Placement | null {

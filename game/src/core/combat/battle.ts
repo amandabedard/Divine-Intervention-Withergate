@@ -250,23 +250,30 @@ export function playerAct(ctx: Ctx, action: BattleAction): BattleEvent[] {
       break;
     }
     case 'spare': {
+      // Decided G1: a Charisma check helped by Divinity (a god nobody knows is easy to ignore);
+      // success pays in items, never XP.
       if (!canSpare(ctx)) return [];
-      const check = enemy.spare?.check ?? { stat: 'charisma' as const, dc: 12 };
+      const spare = enemy.spare!;
+      const check = spare.check ?? { stat: 'charisma' as const, dc: 12 };
+      const divinityBonus = Math.floor(playerCombat(ctx).divinity / 2);
       const roll = resolveCheck(
         ctx.rng.d20(),
         ctx.state.player.stats[check.stat],
         ctx.state.player.stats.luck,
         check.dc,
-        tagCheckBonus(activeTags(ctx.state), check.stat),
+        divinityBonus + tagCheckBonus(activeTags(ctx.state), check.stat),
       );
       const ok = roll.outcome === 'success' || roll.outcome === 'crit_success';
       events.push({ type: 'spare', success: ok });
       if (ok) {
         b.phase = 'spared';
-        const xp = enemy.spare?.xp ?? 0;
-        if (xp) grantXp(ctx, xp);
-        for (const t of enemy.spare?.tags ?? []) if (!ctx.state.player.tags.includes(t)) ctx.state.player.tags.push(t);
-        events.push({ type: 'end', result: 'spared', xp, loot: {}, drops: [] });
+        const drops: string[] = [];
+        for (const [item, n] of Object.entries(spare.items)) {
+          ctx.state.town.storage[item] = (ctx.state.town.storage[item] ?? 0) + n;
+          for (let i = 0; i < n; i += 1) drops.push(item);
+        }
+        for (const t of spare.tags) if (!ctx.state.player.tags.includes(t)) ctx.state.player.tags.push(t);
+        events.push({ type: 'end', result: 'spared', xp: 0, loot: {}, drops });
         return events;
       }
       break;

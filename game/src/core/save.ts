@@ -59,6 +59,10 @@ function migrate(state: GameState): GameState {
   // Future save-format migrations go here, keyed on state.version.
   state.party ??= [];
   state.battle = null;
+  state.notices ??= [];
+  state.player.weapons ??= state.player.weaponId ? [state.player.weaponId] : [];
+  state.town.slots ??= {};
+  for (const b of state.town.buildQueue) b.slot ??= '';
   state.version = SAVE_VERSION;
   return state;
 }

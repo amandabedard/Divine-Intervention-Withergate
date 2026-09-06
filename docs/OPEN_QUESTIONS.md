@@ -2,7 +2,7 @@
 
 Answer inline under each question (replace the `Answer:` line). Each question states the default that applies if you say nothing. I check this file at the start of every session and fold answers into the design docs.
 
-Groups A–F were answered on 2026-09-06 and 2026-09-07 and are kept below as the decision log. Group G holds the current follow-ups.
+Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as the decision log. Group H holds the current follow-ups.
 
 ---
 
@@ -58,16 +58,23 @@ Groups A–F were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 
 ---
 
-## G. Follow-ups
+| G1 | Combat numbers as proposed, except **Spare**: a Charisma check helped by Divinity (a god nobody knows is easy to ignore), it pays in items instead of XP, and some enemies can never be spared. |
+| G2 | Battle loot goes to Withergate's stores until the haul exists. |
+| G3 | Corruption cadence: a full week (5 days) without clearing corruption brings the warning; if a dungeon has not been started within the next 3 days, someone is taken. |
+| — | All five build slots are the same (large) size and sit together east of town; the old fifth spot at the west end is now the **shrine**, where you manage your divinity (unlock and hold powers). |
 
-**G1. Combat numbers.** Phase 4 ships with these proposals: crit chance 5% + 1% per Luck; dodge 2% per Dexterity (player only); Defend halves damage and restores 2 Grace; a power's damage scales from Divinity (`Divinity × 2 × power`) instead of Attack; Spare appears when an enemy is under 25% HP. Change any of them?
-Default: as stated.
+---
+
+## H. Follow-ups
+
+**H1. Corruption dungeons.** "Clearing corruption" means finishing a corruption map (a dungeon that takes days). Is starting one enough to reset the warning clock, or only finishing it? Do dungeons appear as expedition checkpoints, or as their own destinations?
+Default: starting one pauses the clock, finishing resets it; they are their own destinations on the expedition map.
 Answer:
 
-**G2. Loot outside expeditions.** Until expeditions exist, battle loot goes straight into Withergate's stores. Once the haul and caravan arrive (Phase 7), loot on the road goes into the haul instead. OK?
-Default: yes.
+**H2. Store stock.** The general store currently sells every resource plus a few gifts from `economy.yaml`. Should stock be limited per day, or change with the town's industry, from the start?
+Default: unlimited until Phase 8 adds industry.
 Answer:
 
-**G3. Corruption timing.** How often does the corruption claim someone once the week-long warning has passed and nothing was done: one character per week, or escalating?
-Default: one per week, escalating to two after the second warning.
+**H3. Fixed-facility workplaces.** Residents whose workplace is a fixed facility (tavern, store) stand outside its door during the day. Good enough, or should the fixed buildings get interiors and spots?
+Default: outside the door for now.
 Answer:

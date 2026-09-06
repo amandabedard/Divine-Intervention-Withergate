@@ -28,3 +28,9 @@ items:
     description: "More gilt than gold."
     rarity: uncommon
     sources: [cache]
+  - id: hollow_fang
+    name: Hollow Fang
+    kind: gift
+    description: "A wolf's tooth that still hums faintly when you hold it."
+    rarity: uncommon
+    sources: [spare]

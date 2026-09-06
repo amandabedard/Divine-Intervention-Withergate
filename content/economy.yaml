@@ -1,0 +1,6 @@
+# General store prices (gold per unit) and what it stocks. Bazaar and Socialite bonuses discount buys.
+prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }
+sell_rate: 0.5
+gifts:
+  whetstone: 8
+  hearty_stew: 5

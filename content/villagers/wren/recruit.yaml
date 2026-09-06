@@ -1,0 +1,10 @@
+# SAMPLE recruit conversation; she only agrees when a Farm exists (profile.yaml).
+topic_label: "Come farm Withergate"
+script:
+  - wren: "[PLACEHOLDER: You built a farm. Then you'll want someone who knows what to do with it.]"
+unhappy:
+  - when: { reason: not_facility }
+    lines: [ wren: "[PLACEHOLDER: There's no farm. What am I supposed to do here, watch the grass?]" ]
+  - lines: [ wren: "[PLACEHOLDER: This isn't working.]" ]
+farewell:
+  - wren: "[PLACEHOLDER: I'm going back to Dilsdurf. The dirt there at least gets turned.]"

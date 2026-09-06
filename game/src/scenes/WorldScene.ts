@@ -34,6 +34,17 @@ const TALK_RANGE = 110;
 
 const EXIT_ARROWS: Record<EntityOf<'exit'>['direction'], string> = { left: '←', right: '→', up: '↑', down: '↓', door: '↑' };
 
+const FACILITY_COLORS: Record<string, string> = {
+  barracks: '#6a4a4a',
+  farm: '#6a7a3a',
+  library: '#4a5a7a',
+  town_hall: '#7a6a3a',
+  bazaar: '#8a5a7a',
+  hospital: '#5a7a7a',
+  inn: '#7a5a3a',
+  restaurant: '#8a6a4a',
+};
+
 function isAutoExit(exit: EntityOf<'exit'>): boolean {
   return exit.auto ?? (exit.direction === 'left' || exit.direction === 'right');
 }
@@ -113,9 +124,39 @@ export class WorldScene extends Phaser.Scene {
     for (const p of map.layers.decor) drawPlacement(this, p, p.y + (p.h ?? 0));
     for (const p of map.layers.foreground) drawPlacement(this, p, DEPTH.foreground);
 
-    for (const slot of mapEntities(map, 'facility_slot')) drawSlot(this, slot.x, slot.y, slot.size, slot.id);
-    this.interactables = mapEntities(map, 'interactable');
+    this.interactables = [...mapEntities(map, 'interactable')];
     for (const it of this.interactables) drawInteractable(this, it.x, it.y, it.w, it.h, it.label ?? it.id);
+    // Build slots: an empty dashed outline, a construction notice, or the finished facility.
+    // Each one is also something the player can walk up to and use.
+    for (const slot of mapEntities(map, 'facility_slot')) {
+      const w = slot.size === 'large' ? 320 : 200;
+      const h = slot.size === 'large' ? 240 : 160;
+      const built = state.town.slots[slot.id];
+      const building = state.town.buildQueue.find((b) => b.slot === slot.id);
+      if (built) {
+        const facility = content.facilities[built];
+        drawPlacement(
+          this,
+          { asset: 'placeholder', x: slot.x - w / 2, y: slot.y - h, w, h, color: FACILITY_COLORS[built] ?? '#7a6a5a', label: facility?.name ?? built },
+          DEPTH.midground,
+        );
+      } else if (building) {
+        const name = content.facilities[building.facility]?.name ?? building.facility;
+        drawSlot(this, slot.x, slot.y, slot.size, `${name}\nunder construction\n${building.daysLeft} day${building.daysLeft === 1 ? '' : 's'} left`);
+      } else {
+        drawSlot(this, slot.x, slot.y, slot.size, `Build slot\n${slot.id}`);
+      }
+      this.interactables.push({
+        type: 'interactable',
+        id: `slot:${slot.id}`,
+        x: slot.x - w / 2,
+        y: slot.y - h,
+        w,
+        h,
+        label: built ? (content.facilities[built]?.name ?? built) : 'Build here',
+        action: { kind: 'facility', facility: slot.id },
+      });
+    }
     this.triggers = mapEntities(map, 'trigger');
     this.exits = mapEntities(map, 'exit');
     for (const ex of this.exits) {
@@ -195,6 +236,7 @@ export class WorldScene extends Phaser.Scene {
       bus.on('stage', ({ step, done }) => this.performStage(step, done)),
       bus.on('battle.start', () => this.scene.pause()),
       bus.on('battle.end', () => this.scene.resume()),
+      bus.on('town.changed', () => this.switchMap({ map: this.map.id, x: this.player.obj.x, facing: this.player.facing })),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribe.forEach((u) => u());

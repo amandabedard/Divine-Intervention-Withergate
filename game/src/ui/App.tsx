@@ -100,7 +100,7 @@ export function App() {
       {ui.mode === 'dialog' && ui.talk && !ui.dialogActive && <TalkMenu snap={snap} />}
       {ui.mode === 'dialog' && ui.dialogActive && <DialogBox snap={snap} />}
       {ui.mode === 'battle' && state && <BattleUi snap={snap} />}
-      {ui.mode === 'panel' && ui.panel && <Panel kind={ui.panel} snap={snap} />}
+      {ui.mode === 'panel' && ui.panel && <Panel kind={ui.panel} arg={ui.panelArg} snap={snap} />}
       <Toasts toasts={ui.toasts} />
       {ui.debugOpen && <DebugPanel snap={snap} />}
     </>

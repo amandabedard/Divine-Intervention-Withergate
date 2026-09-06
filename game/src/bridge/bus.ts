@@ -25,6 +25,8 @@ export interface Events {
   'battle.event': BattleEvent;
   /** The fight is over. */
   'battle.end': { result: BattleResult };
+  /** Facilities were built, finished or demolished; the town map redraws. */
+  'town.changed': undefined;
 }
 
 type Handler<T> = (payload: T) => void;

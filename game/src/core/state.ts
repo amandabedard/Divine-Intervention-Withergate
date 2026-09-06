@@ -36,6 +36,8 @@ export interface PlayerState {
   grace: number;
   energy: number;
   weaponId: string | null;
+  /** Weapons the player owns; one is equipped at a time (chosen at Quarters). */
+  weapons: string[];
   powers: string[];
   equippedPowers: string[];
   skillPoints: number;
@@ -80,8 +82,11 @@ export interface GameState {
   time: { day: number; phase: Phase };
   where: { map: string; x: number; facing: 'left' | 'right' };
   town: {
+    /** Completed facilities (the four fixed ones plus what was built). */
     facilities: string[];
-    buildQueue: { facility: string; daysLeft: number }[];
+    buildQueue: { facility: string; slot: string; daysLeft: number }[];
+    /** Map slot id -> facility built there. */
+    slots: Record<string, string>;
     resources: Record<Resource, number>;
     storage: Record<string, number>;
   };
@@ -95,6 +100,8 @@ export interface GameState {
   party: string[];
   /** The fight in progress, or null. Never persisted across a save. */
   battle: BattleState | null;
+  /** Messages that arrived overnight (messenger warnings, completed buildings), shown after sleeping. */
+  notices: string[];
   log: string[];
   rng: number;
 }
@@ -119,7 +126,10 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
   const startMap = opts.startMap ?? (content.maps.withergate ? 'withergate' : Object.keys(content.maps)[0] ?? 'withergate');
   const map = content.maps[startMap];
   const spawn = map ? mapEntities(map, 'spawn').find((s) => s.id === (opts.startSpawn ?? 'default')) ?? mapEntities(map, 'spawn')[0] : undefined;
-  const startingWeapon = Object.values(content.weapons).find((w) => w.source?.starting)?.id ?? null;
+  const startingWeapons = Object.values(content.weapons)
+    .filter((w) => w.source?.starting)
+    .map((w) => w.id);
+  const startingWeapon = startingWeapons[0] ?? null;
   const prog = content.progression;
 
   const state: GameState = {
@@ -136,6 +146,7 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
       grace: prog.grace.base + prog.grace.per_divinity * prog.base.divinity,
       energy: prog.energy.player_max,
       weaponId: startingWeapon,
+      weapons: startingWeapons,
       powers: [],
       equippedPowers: [],
       skillPoints: 0,
@@ -150,6 +161,7 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     town: {
       facilities: [...FIXED_FACILITIES],
       buildQueue: [],
+      slots: {},
       resources: { ...(Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>), gold: 50, wood: 20 },
       // DEV DEFAULT: two sample gifts so the gift menu can be tested before storage exists.
       storage: { whetstone: 1, hearty_stew: 1 },
@@ -162,10 +174,63 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     scheduleOverrides: {},
     party: [],
     battle: null,
+    notices: [],
     log: [],
     rng: seed >>> 0,
   };
   return state;
+}
+
+/** Numeric bonuses granted by completed facilities (their `effects` lists). */
+export interface TownBonuses {
+  resource_income: Partial<Record<Resource, number>>;
+  store_rates: number;
+  energy_max: number;
+  recovery_speed: number;
+  caravan_safety: number;
+  preview_nodes: number;
+  incursion_defense: number;
+  faith_gain: number;
+  tavern_quality: number;
+  actions: string[];
+}
+
+export function townBonuses(state: GameState, content: ContentBundle): TownBonuses {
+  const t: TownBonuses = {
+    resource_income: {},
+    store_rates: 0,
+    energy_max: 0,
+    recovery_speed: 0,
+    caravan_safety: 0,
+    preview_nodes: 0,
+    incursion_defense: 0,
+    faith_gain: 0,
+    tavern_quality: 0,
+    actions: [],
+  };
+  const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback);
+  for (const id of state.town.facilities) {
+    for (const e of content.facilities[id]?.effects ?? []) {
+      switch (e.type) {
+        case 'resource_income': {
+          const r = e.resource as Resource;
+          t.resource_income[r] = (t.resource_income[r] ?? 0) + num(e.amount);
+          break;
+        }
+        case 'store_rates': t.store_rates += num(e.percent); break;
+        case 'energy_max': t.energy_max += num(e.amount); break;
+        case 'recovery_speed': t.recovery_speed += num(e.days); break;
+        case 'caravan_safety': t.caravan_safety += num(e.percent); break;
+        case 'preview_nodes': t.preview_nodes += num(e.columns); break;
+        case 'incursion_defense': t.incursion_defense += num(e.amount); break;
+        case 'faith_gain': t.faith_gain += num(e.percent); break;
+        case 'tavern_quality': t.tavern_quality += num(e.amount); break;
+        case 'unlock_action': if (typeof e.action === 'string') t.actions.push(e.action); break;
+        default: break;
+      }
+    }
+  }
+  return t;
 }
 
 export interface CombatStats {
@@ -272,7 +337,7 @@ export function maxGrace(state: GameState, content: ContentBundle): number {
 }
 
 export function maxEnergy(state: GameState, content: ContentBundle): number {
-  return content.progression.energy.player_max;
+  return content.progression.energy.player_max + townBonuses(state, content).energy_max;
 }
 
 export function residents(state: GameState): string[] {

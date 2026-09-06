@@ -102,12 +102,17 @@ export const EnemySchema = z.strictObject({
   loot: z.partialRecord(z.enum(RESOURCES), z.number()).default({}),
   gift_drop: z.strictObject({ item: ID, chance: z.number().min(0).max(1) }).optional(),
   tags_on_kill: z.array(ID).default([]),
+  /**
+   * Sparing (decided G1): a Charisma check helped by Divinity, offered under a quarter HP.
+   * Success pays in items instead of XP. Leave `spare` out (or possible: false) for enemies
+   * that can never be spared.
+   */
   spare: z
     .strictObject({
       possible: z.boolean().default(true),
       check: z.strictObject({ stat: z.enum(STATS), dc: z.number().int() }).optional(),
+      items: z.record(ID, z.number().int().positive()).default({}),
       tags: z.array(ID).default([]),
-      xp: z.number().nonnegative().default(0),
     })
     .optional(),
   appears: z
@@ -283,6 +288,38 @@ export interface Cutscene {
   stage?: Stage;
   script: Script;
 }
+
+// Economy (content/economy.yaml) --------------------------------------------
+
+export const EconomySchema = z.strictObject({
+  /** Gold per unit at the general store. */
+  prices: z.partialRecord(z.enum(RESOURCES), z.number().positive()),
+  /** Fraction of the buy price paid when selling. */
+  sell_rate: z.number().min(0).max(1).default(0.5),
+  /** Gift items the general store stocks, gold each. */
+  gifts: z.record(ID, z.number().positive()).default({}),
+});
+export type Economy = z.output<typeof EconomySchema>;
+
+// Tavern activities (content/tavern.yaml) -----------------------------------
+
+export const TavernActivitySchema = z.strictObject({
+  id: ID,
+  label: z.string().min(1),
+  description: z.string().default(''),
+  requires: ConditionSchema.optional(),
+  gold: z.number().nonnegative().default(0),
+  cost: z.enum(['none', 'phase']).default('none'),
+  once_per_day: z.boolean().default(true),
+  effects: RawEffectsSchema.optional(),
+  script: RawScriptSchema.optional(),
+});
+export type RawTavernActivity = z.output<typeof TavernActivitySchema>;
+export interface TavernActivity extends Omit<RawTavernActivity, 'effects' | 'script'> {
+  effects?: Effects;
+  script?: Script;
+}
+export const TavernFileSchema = z.strictObject({ activities: z.array(TavernActivitySchema) });
 
 // Progression --------------------------------------------------------------
 

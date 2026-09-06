@@ -32,6 +32,24 @@ import { listSlots, loadSlot, saveToSlot } from './save';
 import { newGame, residents, villagerState } from './state';
 import type { GameState, NewGameOptions } from './state';
 import { advancePhases, sleepUntilMorning } from './time';
+import {
+  buy,
+  buyGift,
+  canBuild,
+  canUnlockPower,
+  craft,
+  demolish,
+  doActivity,
+  equipWeapon,
+  escortHome,
+  satchelAdd,
+  satchelRemove,
+  sell,
+  slotIds,
+  startBuild,
+  toggleEquip,
+  unlockPower,
+} from './town';
 
 type DoneMode = 'menu' | 'close' | 'scene' | 'natural';
 
@@ -119,6 +137,9 @@ class Session {
         break;
       case 'npc_refresh':
         bus.emit('npc.refresh');
+        break;
+      case 'town_changed':
+        bus.emit('town.changed');
         break;
       default:
         break;
@@ -230,21 +251,133 @@ class Session {
     saveToSlot(slot, store.state!);
     store.toast(`A new day. Saved to slot ${slot}.`);
     this.closePanel();
-    this.onMapEntered(store.state!.where.map);
+    const map = store.state!.where.map;
+    if (!this.showNotices()) this.onMapEntered(map);
+    else this.after(() => this.onMapEntered(map));
   }
 
   slots() {
     return listSlots();
   }
 
+  /** Read out anything that arrived overnight (messenger warnings, finished buildings). */
+  showNotices(): boolean {
+    const s = store.state;
+    if (!s || !s.notices.length || this.interp) return false;
+    const steps: Step[] = s.notices.map((text) => ({ kind: 'line', speaker: 'narrate', text }));
+    s.notices = [];
+    store.commit();
+    this.runSteps(steps, 'notices', undefined, () => this.setWorld());
+    return true;
+  }
+
   // -- panels ----------------------------------------------------------------
 
-  openPanel(kind: PanelKind): void {
-    store.updateUi({ mode: 'panel', panel: kind });
+  openPanel(kind: PanelKind, arg: string | null = null): void {
+    store.updateUi({ mode: 'panel', panel: kind, panelArg: arg });
   }
 
   closePanel(): void {
-    store.updateUi({ mode: 'world', panel: null });
+    store.updateUi({ mode: 'world', panel: null, panelArg: null });
+  }
+
+  /** A build slot (or a built facility) on the town map was used. */
+  slotInteract(id: string): void {
+    const s = store.state;
+    if (!s) return;
+    const built = s.town.slots[id];
+    if (built) {
+      this.openPanel('facility', built);
+      return;
+    }
+    if (slotIds(this.ctx()).includes(id)) {
+      const building = s.town.buildQueue.find((b) => b.slot === id);
+      if (building) {
+        const name = store.content.facilities[building.facility]?.name ?? building.facility;
+        store.toast(`${name} will be ready in ${building.daysLeft} day${building.daysLeft === 1 ? '' : 's'}.`);
+        return;
+      }
+      this.openPanel('build', id);
+      return;
+    }
+    if (s.town.facilities.includes(id)) this.openPanel('facility', id);
+    else this.openPanel('build');
+  }
+
+  // -- town commands (each returns whether it succeeded; failures toast the reason) ----
+
+  town = {
+    build: (facility: string, slot: string): boolean => {
+      const ctx = this.ctx();
+      const err = canBuild(ctx, facility, slot);
+      if (err) {
+        store.toast(err);
+        return false;
+      }
+      startBuild(ctx, facility, slot);
+      this.flush(ctx);
+      this.closePanel();
+      return true;
+    },
+    demolish: (facility: string): boolean => {
+      const ctx = this.ctx();
+      const ok = demolish(ctx, facility);
+      this.flush(ctx);
+      if (ok) this.closePanel();
+      return ok;
+    },
+    escortHome: (id: string): void => {
+      const ctx = this.ctx();
+      escortHome(ctx, id);
+      this.flush(ctx);
+      this.closePanel();
+      this.showNotices();
+    },
+    buy: (resource: Parameters<typeof buy>[1], n: number): boolean => this.townCall((ctx) => buy(ctx, resource, n)),
+    sell: (resource: Parameters<typeof sell>[1], n: number): boolean => this.townCall((ctx) => sell(ctx, resource, n)),
+    buyGift: (item: string): boolean => this.townCall((ctx) => buyGift(ctx, item)),
+    activity: (id: string): void => {
+      const ctx = this.ctx();
+      const r = doActivity(ctx, id);
+      if (!r.ok) {
+        store.toast(r.reason ?? 'Not now.');
+        return;
+      }
+      this.flush(ctx);
+      this.closePanel();
+      if (r.script) this.runScript(r.script, `tavern:${id}`, undefined, () => this.setWorld());
+    },
+    unlockPower: (id: string): boolean => {
+      const ctx = this.ctx();
+      const err = canUnlockPower(ctx, id);
+      if (err) {
+        store.toast(err);
+        return false;
+      }
+      unlockPower(ctx, id);
+      this.flush(ctx);
+      return true;
+    },
+    toggleEquip: (id: string): boolean => this.townCall((ctx) => toggleEquip(ctx, id)),
+    equipWeapon: (id: string | null): boolean => this.townCall((ctx) => equipWeapon(ctx, id)),
+    satchelAdd: (item: string): boolean => this.townCall((ctx) => satchelAdd(ctx, item)),
+    satchelRemove: (index: number): void => {
+      const ctx = this.ctx();
+      satchelRemove(ctx, index);
+      this.flush(ctx);
+    },
+    craft: (kind: 'weapon' | 'item', id: string): boolean => this.townCall((ctx) => craft(ctx, kind, id)),
+  };
+
+  private townCall(fn: (ctx: Ctx) => string | null): boolean {
+    const ctx = this.ctx();
+    const err = fn(ctx);
+    if (err) {
+      store.toast(err);
+      return false;
+    }
+    this.flush(ctx);
+    return true;
   }
 
   toggleDebug(): void {
@@ -296,7 +429,7 @@ class Session {
         break;
       }
       case 'facility':
-        this.openPanel('build');
+        this.slotInteract(a.facility);
         break;
       default:
         break;
@@ -374,6 +507,7 @@ class Session {
       return;
     }
     this.flush(ctx);
+    if (store.ui.mode !== 'world') return;
     const candidates: HeartEvent[] = [];
     for (const v of Object.values(store.content.villagers)) {
       for (const ev of v.events) {
@@ -420,8 +554,17 @@ class Session {
     introduce(ctx, id);
     this.flush(ctx);
     store.updateUi({ mode: 'dialog', talk: { villager: id, view: 'menu' } });
-    // talk-triggered heart events play before the menu
     const rel = villagerState(store.state, store.content, id);
+    // an unhappy resident says why before anything else
+    if (rel.resident && rel.unhappy) {
+      const reason = rel.unhappy.reason;
+      const entry = store.content.villagers[id]!.recruit?.unhappy.find((u) => evaluate(u.when, { ...ctx, extras: { reason } }));
+      if (entry) {
+        this.runSteps(ctx.rng.pick(entry.lines), `unhappy:${id}`, id, () => this.showMenu());
+        return;
+      }
+    }
+    // talk-triggered heart events play before the menu
     const ev = store.content.villagers[id]!.events
       .filter((e) => e.trigger.on === 'talk' && !(e.trigger.once && rel.eventsSeen.includes(e.id)))
       .filter((e) => evaluate(e.trigger.requires, ctx))
@@ -884,6 +1027,7 @@ class Session {
       const ctx = this.ctx();
       sleepUntilMorning(ctx);
       this.flush(ctx);
+      if (store.ui.mode === 'world') this.showNotices();
     },
     setFriendship: (id: string, n: number) => {
       villagerState(store.state!, store.content, id).friendship = n;
@@ -921,10 +1065,13 @@ class Session {
       store.commit();
       bus.emit('world.enter', { map, spawn: s.id });
     },
-    grant: (what: 'faith' | 'xp' | 'gold', n: number) => {
+    grant: (what: 'faith' | 'xp' | 'gold' | 'skill' | 'materials', n: number) => {
       const ctx = this.ctx();
       if (what === 'gold') ctx.state.town.resources.gold += n;
-      else applyEffects(what === 'faith' ? { faith: n } : { xp: n }, ctx);
+      else if (what === 'skill') ctx.state.player.skillPoints += n;
+      else if (what === 'materials') {
+        for (const r of ['wood', 'stone', 'ore', 'food', 'herbs', 'cloth'] as const) ctx.state.town.resources[r] += n;
+      } else applyEffects(what === 'faith' ? { faith: n } : { xp: n }, ctx);
       this.flush(ctx);
     },
     tierLabel: (id: string) => tierForPoints(villagerState(store.state!, store.content, id).friendship),

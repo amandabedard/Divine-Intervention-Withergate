@@ -85,12 +85,12 @@ xp: 12
 loot: { food: 2 }                     # into the haul
 gift_drop: { item: wolf_fang, chance: 0.1 }
 tags_on_kill: []                      # e.g. [ruthless] for a creature that could be spared
-spare: { possible: true, check: { stat: charisma, dc: 12 }, tags: [merciful], xp: 8 }
+spare: { check: { stat: charisma, dc: 12 }, items: { hollow_fang: 1 }, tags: [merciful] }
 appears: { biomes: [forest, corrupted], time: [evening, night], corruption_min: 0 }
 tier: regular                         # regular | elite | boss
 ```
 
-A move with `power` attacks; a move with `effect` applies a status (buffs `attack_up` / `defense_up` / `inspired` go on the enemy itself, everything else on the player); a move can do both. In a move's `when`, `hp_below` means the enemy's own HP fraction. `spare` is optional: leave it out and the enemy can never be spared. Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts (bosses arrive with the story systems).
+A move with `power` attacks; a move with `effect` applies a status (buffs `attack_up` / `defense_up` / `inspired` go on the enemy itself, everything else on the player); a move can do both. In a move's `when`, `hp_below` means the enemy's own HP fraction. `spare` is optional: leave it out (or set `possible: false`) and the enemy can never be spared; otherwise `check` (default Charisma, DC 12, Divinity/2 is added automatically), `items` (what sparing pays, instead of XP) and `tags`. Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts (bosses arrive with the story systems).
 
 ---
 
@@ -218,6 +218,38 @@ Proposed roles for the eight optional facilities (Amanda edits):
 | Restaurant | Tavern quality, energy max, food-based buffs before expeditions | Chef |
 
 Fixed facilities (`your_quarters`, `living_quarters`, `general_store`, `tavern`) are in the same file with `fixed: true` and `cost: {}`.
+
+Effects the game applies today: `resource_income` (resource, amount per day), `store_rates` (percent off buys), `energy_max` (amount), `recovery_speed` (days), `caravan_safety` (percent), `preview_nodes` (columns), `incursion_defense` (amount), `faith_gain` (percent), `tavern_quality` (amount), `unlock_action` (action). Unknown types are kept and ignored.
+
+---
+
+## Economy and the tavern
+
+`content/economy.yaml`
+
+```yaml
+prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 }   # gold per unit at the general store
+sell_rate: 0.5                                                          # fraction of the buy price paid when selling
+gifts: { whetstone: 8, hearty_stew: 5 }                                 # gift items the store stocks, gold each
+```
+
+`content/tavern.yaml` lists what you can do at the tavern. Each activity is a menu entry:
+
+```yaml
+activities:
+  - id: gathering
+    label: "Gather the residents"
+    description: "Spend the evening with everyone who lives here."
+    requires: { time: evening, residents_min: 1 }
+    gold: 0
+    cost: phase                         # none | phase
+    once_per_day: true
+    effects: { friendship_residents: 2, domain_points: { friendship: 1 } }
+    script:
+      - narrate: "Chairs scrape, someone finds a fiddle..."
+```
+
+`friendship_residents` is an effect that changes friendship with every current resident. Heart events and group scenes can be attached to activities through `script`.
 
 ---
 

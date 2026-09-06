@@ -132,7 +132,8 @@ describe('battle flow', () => {
     ctx.rng.d20 = () => 15;
     const events = playerAct(ctx, { kind: 'spare' });
     expect(state.battle!.phase).toBe('spared');
-    expect(state.player.xp).toBe(8);
+    expect(state.player.xp).toBe(0); // items, never xp (decided G1)
+    expect(state.town.storage.hollow_fang).toBe(1);
     expect(state.player.tags).toContain('merciful');
     expect(types(events)).toContain('end');
   });
