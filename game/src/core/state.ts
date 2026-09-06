@@ -9,6 +9,8 @@ import {
   mapEntities,
 } from '@withergate/shared';
 import type { BattleState } from './combat/battle';
+import type { CorruptionClock } from './corruption';
+import { newClock } from './corruption';
 import type { Caravan, ExpeditionState } from './expedition';
 import type {
   ContentBundle,
@@ -107,7 +109,9 @@ export interface GameState {
   quests: Record<string, QuestState>;
   flags: Record<string, FlagValue>;
   choicesMade: string[];
-  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[]; encountersSeen: string[] };
+  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[]; encountersSeen: string[]; clock: CorruptionClock };
+  /** Set once you have ascended; the save is finished. */
+  ended: { day: number; title: string } | null;
   /** The node map being walked, or null at home / in a town. */
   expedition: ExpeditionState | null;
   /** Hauls on their way to Withergate. */
@@ -188,7 +192,8 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     quests: {},
     flags: {},
     choicesMade: [],
-    world: { corruption: 1, relations: {}, unlockedMaps: [], encountersSeen: [] },
+    world: { corruption: 1, relations: {}, unlockedMaps: [], encountersSeen: [], clock: newClock(1) },
+    ended: null,
     expedition: null,
     caravans: [],
     scheduleOverrides: {},

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { EMPTY_INDEX, EMPTY_MANIFEST, emptyBundle } from '@withergate/shared';
 import type { AssetManifest, ContentBundle, GeneratedIndex } from '@withergate/shared';
 import type { BattleEvent } from '../core/combat/battle';
+import type { EndingSummary } from '../core/ending';
 import { Rng } from '../core/rng';
 import type { GameState } from '../core/state';
 import { bus } from './bus';
@@ -21,8 +22,9 @@ export type PanelKind =
   | 'facility'
   | 'craft'
   | 'notice_board'
-  | 'expedition_plan';
-export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition';
+  | 'expedition_plan'
+  | 'journal';
+export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition' | 'ending';
 
 export interface ExpeditionView {
   view: 'map' | 'result' | 'checkpoint' | 'menu';
@@ -82,6 +84,7 @@ export interface UiState {
   dialogActive: boolean;
   battle: BattleView | null;
   expedition: ExpeditionView | null;
+  ending: EndingSummary | null;
   toasts: Toast[];
   debugOpen: boolean;
 }
@@ -107,6 +110,7 @@ function initialUi(): UiState {
     dialogActive: false,
     battle: null,
     expedition: null,
+    ending: null,
     toasts: [],
     debugOpen: false,
   };

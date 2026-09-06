@@ -5,6 +5,7 @@
 import { PHASES, RESOURCES, tierForPoints } from '@withergate/shared';
 import type { Biome, BiomeDef, Encounter, NodeType, Phase, Region, Resource, Script, Step } from '@withergate/shared';
 import { evaluate } from './conditions';
+import { dungeonAbandoned, dungeonFinished, dungeonStarted } from './corruption';
 import type { Ctx } from './ctx';
 import { expeditionBlocker, maxEnergy, maxHp, residents, townBonuses, villagerState } from './state';
 import type { GameState } from './state';
@@ -384,6 +385,7 @@ export function startExpedition(ctx: Ctx, regionId: string, party: string[]): Ex
   const exp = generateExpedition(ctx, region, direction);
   exp.log.push(`Set out on ${region.name} on day ${ctx.state.time.day}.`);
   ctx.state.expedition = exp;
+  dungeonStarted(ctx, region);
   ctx.requests.push({ kind: 'npc_refresh' });
   return exp;
 }
@@ -731,6 +733,8 @@ export function headHome(ctx: Ctx): { days: number; report: string[] } {
   const exp = ctx.state.expedition;
   if (!exp) throw new Error('not on an expedition');
   const region = ctx.content.regions[exp.region];
+  dungeonAbandoned(ctx, region);
+  ctx.state.flags.expeditions_done = Number(ctx.state.flags.expeditions_done ?? 0) + 1;
   const days = Math.max(1, Math.ceil((exp.col + 1) / (NODES_PER_SEGMENT * 2)));
   for (let d = 0; d < days; d += 1) sleepUntilMorning(ctx);
   const report: string[] = [];
@@ -754,6 +758,8 @@ export function arrive(ctx: Ctx): { map: string; spawn: string; report: string[]
   const region = ctx.content.regions[exp.region];
   const report: string[] = [];
   const hasHaul = Object.values(exp.haul).some((n) => (n ?? 0) > 0) || Object.keys(exp.items).length > 0;
+  dungeonFinished(ctx, region);
+  ctx.state.flags.expeditions_done = Number(ctx.state.flags.expeditions_done ?? 0) + 1;
   if (!exp.to || exp.to === 'withergate') {
     if (hasHaul) report.push(deliver(ctx, { resources: exp.haul, items: exp.items, risk: caravanRisk(ctx, ctx.content.progression.caravan.loss_chance_end, region), region: exp.region }, 'The haul you carried'));
     report.push(exp.to ? 'Withergate. Home.' : `Back from ${region?.name ?? 'the wild'}.`);
@@ -796,6 +802,7 @@ export function arrive(ctx: Ctx): { map: string; spawn: string; report: string[]
 export function endExpeditionByDeath(ctx: Ctx): void {
   const exp = ctx.state.expedition;
   if (!exp) return;
+  dungeonAbandoned(ctx, ctx.content.regions[exp.region]);
   ctx.state.expedition = null;
   ctx.state.notices.push(`Whatever you gathered on ${ctx.content.regions[exp.region]?.name ?? 'the road'} is lost.`);
 }

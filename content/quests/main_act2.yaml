@@ -1,0 +1,12 @@
+# SAMPLE main-chain skeleton, act 2: the discord between the towns. Completes on a flag
+# Amanda's story content sets (main_act2_done) so the chain can be played through.
+id: main_act2
+title: "[PLACEHOLDER: The Discord]"
+type: main
+giver: none
+summary: "[PLACEHOLDER: The five towns pull in five directions while the incursions grow bolder.]"
+stages:
+  - id: placeholder
+    objective: "[PLACEHOLDER: Act 2 objectives, written by Amanda. Set the flag main_act2_done to finish.]"
+    complete_when: { flags: [main_act2_done] }
+rewards: { faith: 25, xp: 100, quest_start: main_act3 }

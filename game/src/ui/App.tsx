@@ -8,7 +8,7 @@ import { ExpeditionUi } from './expedition';
 import { Hud, Toasts } from './hud';
 import { dispatchNav, keyToNav, startGamepadPolling } from './nav';
 import { Panel } from './panels';
-import { CreationScreen, TitleScreen } from './screens';
+import { CreationScreen, EndingScreen, TitleScreen } from './screens';
 
 /** Modes where menus own the input (the world scene reads the keyboard itself otherwise). */
 const menuActive = (): boolean => {
@@ -41,6 +41,11 @@ export function App() {
       }
       if (typing) return;
       const u = session.uiState();
+      if (u.mode === 'world' && (e.key === 'j' || e.key === 'J') && !e.repeat) {
+        e.preventDefault();
+        session.openPanel('journal');
+        return;
+      }
       if (u.mode === 'world' || u.mode === 'boot') return;
       if (u.mode === 'creation') {
         if (e.key === 'Escape' && !e.repeat) session.backToTitle();
@@ -97,7 +102,8 @@ export function App() {
       )}
       {ui.mode === 'title' && <TitleScreen />}
       {ui.mode === 'creation' && <CreationScreen />}
-      {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && ui.mode !== 'expedition' && <Hud snap={snap} />}
+      {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && ui.mode !== 'expedition' && ui.mode !== 'ending' && <Hud snap={snap} />}
+      {ui.mode === 'ending' && ui.ending && <EndingScreen summary={ui.ending} />}
       {state?.expedition && (ui.mode === 'expedition' || ui.mode === 'dialog') && <ExpeditionUi snap={snap} dimmed={ui.mode !== 'expedition'} />}
       {ui.mode === 'dialog' && ui.talk && !ui.dialogActive && <TalkMenu snap={snap} />}
       {ui.mode === 'dialog' && ui.dialogActive && <DialogBox snap={snap} />}

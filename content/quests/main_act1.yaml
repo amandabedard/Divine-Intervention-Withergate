@@ -1,0 +1,34 @@
+# SAMPLE main-chain skeleton, act 1: founding Withergate. Started by act 0's rewards.
+# Amanda owns the story; these stages only prove the chain runs end to end.
+id: main_act1
+title: "[PLACEHOLDER: Founding Withergate]"
+type: main
+giver: none
+summary: "[PLACEHOLDER: Four buildings and a great deal of horizon. Make it a town, and make the frontier notice.]"
+stages:
+  - id: first_resident
+    objective: "[PLACEHOLDER: Convince someone to live in Withergate.]"
+    complete_when: { residents_min: 1 }
+  - id: first_facility
+    objective: "[PLACEHOLDER: Raise a facility of your own.]"
+    complete_when:
+      any:
+        - { facility: barracks }
+        - { facility: farm }
+        - { facility: library }
+        - { facility: town_hall }
+        - { facility: bazaar }
+        - { facility: hospital }
+        - { facility: inn }
+        - { facility: restaurant }
+  - id: first_road
+    objective: "[PLACEHOLDER: Walk a road to its end and come back.]"
+    complete_when: { flag_min: { expeditions_done: 1 } }
+  - id: the_den
+    objective: "[PLACEHOLDER: Something festers on the Frontier. Clear the Hollow Den.]"
+    checkpoint: hollow_den
+    complete_when: { flags: [hollow_den_cleared] }
+rewards: { faith: 15, xp: 60, quest_start: main_act2 }
+journal_notes:
+  first_road: "[PLACEHOLDER: The roads are longer than the messenger let on.]"
+  the_den: "[PLACEHOLDER: The corruption has a shape now. It can be fought.]"

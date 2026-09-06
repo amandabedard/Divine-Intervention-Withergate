@@ -26,6 +26,7 @@ import {
 } from '../villager.ts';
 import type { Barks, GiftOverride, HeartEvent, Pool, Topic, VillagerBundle } from '../villager.ts';
 import {
+  AscensionSchema,
   BiomesFileSchema,
   CutsceneSchema,
   EconomySchema,
@@ -407,6 +408,11 @@ export async function loadContent(opts: LoadOptions): Promise<LoadResult> {
   }
   const economy = await single('economy.yaml', EconomySchema);
   if (economy) bundle.economy = economy.data;
+  const ascension = await single('ascension.yaml', AscensionSchema);
+  if (ascension) {
+    const ctx = mkCtx(ascension.pf, 'narrate');
+    bundle.ascension = { ...ascension.data, epilogue: ascension.data.epilogue ? normalizeScript(ascension.data.epilogue, ctx, ['epilogue']) : undefined };
+  }
   const tavern = await single('tavern.yaml', TavernFileSchema);
   if (tavern) {
     const ctx = mkCtx(tavern.pf, 'narrate');

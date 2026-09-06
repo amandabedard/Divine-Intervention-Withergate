@@ -107,3 +107,21 @@ Answer:
 **J4. Corruption clearing.** The frontier's `hollow_den` lowers corruption by one and sets `hollow_den_cleared`; the countdown and messenger from G3/H1 arrive with Phase 8. Should clearing a den also protect a named villager (a "who was saved" line), or only reset the clock?
 Default: only the clock.
 Answer:
+
+## K. Story systems (2026-09-07, Phase 8 built with these defaults)
+
+**K1. Ascension conditions.** `content/ascension.yaml` requires act 3 done, faith level 5 and five residents. Keep, loosen, or add (a romance, a specific facility, corruption below a level)?
+Default: as written.
+Answer:
+
+**K2. Who the corruption takes.** Anyone not living in Withergate and not `protected: true`, met or not, chosen at random. Should unmet characters be safe until you have met them, and should a taken villager's personal quest fail with a line?
+Default: anyone; quests need their own `fail_when`.
+Answer:
+
+**K3. Spread and incursions.** Corruption rises by one every ten idle days and, from level 6, corrupted things may hit the stores at night unless the Barracks and Warriors hold. Numbers in `progression.yaml → corruption`. Do you want incursions to be scenes (a fight at the gate) rather than a morning notice?
+Default: notices.
+Answer:
+
+**K4. Town relations and the war.** Relations are a matrix set by `relations` effects and read by `relations` conditions; nothing moves them yet. Do you want a `towns.yaml` (name, conflict, starting relations, notice-board lines) so the war can be data, or will it live in quests?
+Default: quests.
+Answer:

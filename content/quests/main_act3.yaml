@@ -1,0 +1,12 @@
+# SAMPLE main-chain skeleton, act 3: the source of the corruption. Completes on a flag
+# Amanda's story content sets (main_act3_done); finishing it opens ascension at the shrine.
+id: main_act3
+title: "[PLACEHOLDER: The Source]"
+type: main
+giver: none
+summary: "[PLACEHOLDER: Follow the corruption to where it comes from.]"
+stages:
+  - id: placeholder
+    objective: "[PLACEHOLDER: Act 3 objectives, written by Amanda. Set the flag main_act3_done to finish.]"
+    complete_when: { flags: [main_act3_done] }
+rewards: { faith: 40, xp: 200 }

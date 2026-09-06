@@ -1,7 +1,9 @@
 import type { GameMap } from './map.ts';
+import { DEFAULT_CORRUPTION_RULES } from './world.ts';
 import type { Script } from './script.ts';
 import type { VillagerBundle } from './villager.ts';
 import type {
+  Ascension,
   BiomeDef,
   Cutscene,
   Economy,
@@ -53,9 +55,12 @@ export interface ContentBundle {
   progression: Progression;
   economy: Economy;
   tavern: TavernActivity[];
+  ascension: Ascension;
   issues: Issue[];
   stats: ContentStats;
 }
+
+export const DEFAULT_ASCENSION: Ascension = { not_yet: '[PLACEHOLDER: The heavens are not ready for you yet.]', titles: {} };
 
 export const DEFAULT_ECONOMY: Economy = {
   prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 },
@@ -77,6 +82,7 @@ export const DEFAULT_PROGRESSION: Progression = {
   stats: { start: 2, points: 15, max_at_creation: 8, max: 10 },
   energy: { player_max: 8, companion_recovery_per_day: 2, death_recovery_days: 5 },
   caravan: { loss_chance_end: 0.3, loss_chance_checkpoint: 0.5, loss_fraction: [0.25, 0.5] },
+  corruption: DEFAULT_CORRUPTION_RULES,
 };
 
 export function emptyBundle(): ContentBundle {
@@ -97,6 +103,7 @@ export function emptyBundle(): ContentBundle {
     progression: DEFAULT_PROGRESSION,
     economy: DEFAULT_ECONOMY,
     tavern: [],
+    ascension: DEFAULT_ASCENSION,
     issues: [],
     stats: { files: 0, villagers: 0, maps: 0, lines: 0, placeholders: 0 },
   };

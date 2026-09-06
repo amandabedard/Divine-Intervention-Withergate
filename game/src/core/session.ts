@@ -26,6 +26,7 @@ import { Interpreter } from './dialog/interpreter';
 import type { InterpreterOutput } from './dialog/interpreter';
 import { pickLine } from './dialog/pools';
 import { applyEffects, recruit } from './effects';
+import { ascend, canAscend } from './ending';
 import { arrive, canStart, completeNode, endExpeditionByDeath, headHome, sendHaulHome, startExpedition, travelTo } from './expedition';
 import type { NodeOutcome } from './expedition';
 import { checkQuests } from './quests';
@@ -378,6 +379,34 @@ class Session {
     }
     this.flush(ctx);
     return true;
+  }
+
+  // -- the ending ---------------------------------------------------------------
+
+  /** From the shrine: leave the mortal plane if the heavens will have you. */
+  ascend(): boolean {
+    const ctx = this.ctx();
+    const err = canAscend(ctx);
+    if (err) {
+      store.toast(err);
+      return false;
+    }
+    const summary = ascend(ctx);
+    this.flush(ctx);
+    const epilogue = store.content.ascension.epilogue;
+    const show = () => store.updateUi({ mode: 'ending', panel: null, panelArg: null, ending: summary });
+    if (epilogue) {
+      const script = JSON.parse(JSON.stringify(epilogue).replace(/\{title\}/g, summary.title.replace(/"/g, '\\"'))) as typeof epilogue;
+      this.closePanel();
+      this.runScript(script, 'epilogue', undefined, show);
+    } else show();
+    return true;
+  }
+
+  /** The ending is over: back to the title. */
+  finishGame(): void {
+    store.setState(null);
+    store.updateUi({ mode: 'title', ending: null, panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false, battle: null, expedition: null });
   }
 
   // -- expeditions -------------------------------------------------------------

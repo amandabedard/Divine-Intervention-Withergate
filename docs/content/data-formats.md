@@ -223,6 +223,36 @@ Effects the game applies today: `resource_income` (resource, amount per day), `s
 
 ---
 
+## Ascension
+
+`content/ascension.yaml` decides when the shrine lets you ascend and how the ending names you.
+
+```yaml
+requires: { all: [{ quest: { id: main_act3, status: done } }, { faith_level_min: 5 }, { residents_min: 5 }] }
+not_yet: "The heavens are not listening yet."          # shown at the shrine while requires fails
+titles:                                                 # per axis: epithet after your name, and what you are deity of
+  friendship: { epithet: "the Beloved", domain: "Hearth and Kin" }
+  combat: { epithet: "the Unyielding", domain: "the Sword and the Wall" }
+epilogue:                                               # plays before the ending screen; {title} is filled in
+  - narrate: "They will remember you as {title}."
+```
+
+The strongest axis gives the epithet; it and the runner-up (if at least half as strong) give the domains: "Mara the Unyielding, Goddess of the Sword and the Wall and Roads and Hidden Things". The five axes are shown to the player only on the ending screen.
+
+`content/progression.yaml → corruption` tunes the corruption's cadence and its words (`{name}`, `{town}`, `{lost}` are filled in):
+
+```yaml
+corruption:
+  warning_days: 5        # idle days before the warning
+  grace_days: 3          # days after it to start a corruption expedition before someone is taken
+  rise_every_days: 10    # idle days per +1 corruption (0 = story only)
+  incursion_from: 6      # corruption level from which incursions can happen
+  warning: "You can feel the corruption leaking into the mortal plane…"
+  taken: "It appears we lost {name} in {town} to the corruption last night…"
+```
+
+---
+
 ## Economy and the tavern
 
 `content/economy.yaml`

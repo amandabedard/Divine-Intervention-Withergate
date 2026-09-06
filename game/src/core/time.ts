@@ -2,6 +2,7 @@ import { PHASES, nextPhase } from '@withergate/shared';
 import type { Ctx } from './ctx';
 import { checkQuests } from './quests';
 import { maxEnergy, maxHp, phaseAbs } from './state';
+import { corruptionTick } from './corruption';
 import { resolveCaravans } from './expedition';
 import { checkResidents, completeBuilds, dailyIncome, rollStore, weekOf } from './town';
 
@@ -52,6 +53,7 @@ export function dailyTick(ctx: Ctx): void {
   completeBuilds(ctx);
   dailyIncome(ctx);
   resolveCaravans(ctx);
+  corruptionTick(ctx);
   checkResidents(ctx);
   if (state.town.store && state.town.store.week !== weekOf(state.time.day)) {
     rollStore(ctx);

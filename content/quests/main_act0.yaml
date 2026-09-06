@@ -17,6 +17,6 @@ stages:
   - id: arrive
     objective: "Follow the messenger to Withergate."
     complete_when: { map: withergate }
-rewards: { faith: 5, xp: 20 }
+rewards: { faith: 5, xp: 20, quest_start: main_act1 }
 journal_notes:
   arrive: "[PLACEHOLDER: Withergate. Four buildings and a great deal of horizon.]"

@@ -1,0 +1,19 @@
+# SAMPLE. The ending: when the shrine lets you ascend, and how the game names what you
+# are the deity of. The name comes from your five hidden axes: the strongest gives the
+# epithet, the strongest and the second (if it is at least half as strong) give the
+# domains. Every word here is a placeholder until Amanda writes them.
+requires:
+  all:
+    - { quest: { id: main_act3, status: done } }
+    - { faith_level_min: 5 }
+    - { residents_min: 5 }
+not_yet: "[PLACEHOLDER: The shrine is warm under your hand, but the heavens are not listening yet. Finish what you started; let them believe.]"
+titles:
+  friendship: { epithet: "[PLACEHOLDER: the Beloved]", domain: "[PLACEHOLDER: Hearth and Kin]" }
+  pleasure: { epithet: "[PLACEHOLDER: the Merry]", domain: "[PLACEHOLDER: Feasts and Long Nights]" }
+  prosperity: { epithet: "[PLACEHOLDER: the Provider]", domain: "[PLACEHOLDER: Harvest and Trade]" }
+  combat: { epithet: "[PLACEHOLDER: the Unyielding]", domain: "[PLACEHOLDER: the Sword and the Wall]" }
+  discovery: { epithet: "[PLACEHOLDER: the Far-Seeing]", domain: "[PLACEHOLDER: Roads and Hidden Things]" }
+epilogue:
+  - narrate: "[PLACEHOLDER: The shrine goes quiet. Withergate goes quiet. Then the sky opens.]"
+  - narrate: "[PLACEHOLDER: They will remember you as {title}.]"

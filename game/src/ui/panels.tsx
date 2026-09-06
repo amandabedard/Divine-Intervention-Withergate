@@ -12,6 +12,7 @@ import { session } from '../core/session';
 import { faithLevel, maxEnergy, maxHp, residents, villagerState } from '../core/state';
 import * as town from '../core/town';
 import { ExpeditionPlanPanel } from './expedition';
+import { canAscend } from '../core/ending';
 import { useMenuNav } from './nav';
 
 interface Item {
@@ -89,6 +90,7 @@ export function Panel({ kind, arg, snap }: { kind: PanelKind; arg: string | null
     case 'craft': body = <CraftPanel snap={snap} facility={arg} />; break;
     case 'shrine': body = <ShrinePanel snap={snap} />; break;
     case 'expedition_plan': body = <ExpeditionPlanPanel snap={snap} />; break;
+    case 'journal': body = <JournalPanel snap={snap} />; break;
     default: body = <Placeholder kind={kind} snap={snap} />;
   }
   return (
@@ -111,6 +113,7 @@ function QuartersPanel() {
       { label: 'Storage', note: 'what Withergate holds', run: () => session.openPanel('storage') },
       { label: 'Residents', note: 'escort someone home', run: () => session.openPanel('residents') },
       { label: 'Expedition', note: 'plan a journey from your desk', run: () => session.openPanel('expedition_plan') },
+      { label: 'Journal', note: 'what you have set out to do', run: () => session.openPanel('journal') },
       { label: 'Build', note: 'raise a facility', run: () => session.openPanel('build') },
       { label: 'Close', run: () => session.closePanel() },
     ],
@@ -550,6 +553,8 @@ function ShrinePanel({ snap }: { snap: Snapshot }) {
         });
       }
     }
+    const notYet = canAscend(ctx);
+    list.push({ label: 'Ascend', note: notYet ? 'not yet' : 'leave the mortal plane and take your title', disabled: !!notYet, danger: true, run: () => session.ascend() });
     list.push({ label: 'Close', run: () => session.closePanel() });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -577,3 +582,50 @@ function Placeholder({ kind, snap }: { kind: PanelKind; snap: Snapshot }) {
 }
 
 export const panelTitles = { maxHp, maxEnergy };
+
+// --- Journal ---------------------------------------------------------------------
+
+function JournalPanel({ snap }: { snap: Snapshot }) {
+  const s = snap.state!;
+  const entries = Object.entries(s.quests)
+    .map(([id, q]) => ({ id, q, quest: snap.content.quests[id] }))
+    .filter((e) => e.quest);
+  const active = entries.filter((e) => e.q.status === 'active');
+  const finished = entries.filter((e) => e.q.status !== 'active' && e.q.status !== 'not_started');
+  const items = useMemo<Item[]>(() => [{ label: 'Close', run: () => session.closePanel() }], []);
+  const describe = (e: (typeof entries)[number]) => {
+    const quest = e.quest!;
+    const idx = quest.stages.findIndex((st) => st.id === e.q.stage);
+    const stage = quest.stages[idx];
+    const notes = quest.stages.slice(0, Math.max(0, idx)).map((st) => quest.journal_notes?.[st.id]).filter(Boolean);
+    return { quest, stage, notes };
+  };
+  return (
+    <MenuPanel title="Journal" subtitle={active.length ? `${active.length} thing${active.length === 1 ? '' : 's'} on your mind.` : 'Nothing pressing.'} items={items} onCancel={() => session.closePanel()}>
+      <div className="rows journal">
+        {active.map((e) => {
+          const { quest, stage, notes } = describe(e);
+          return (
+            <div key={e.id} className="kv">
+              <b>{quest.title}</b>
+              <small className="muted">{quest.type}</small>
+              <div>{stage?.objective ?? quest.summary}</div>
+              {notes.map((n, i) => (
+                <div key={i} className="muted small">
+                  {n}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        {finished.map((e) => (
+          <div key={e.id} className="kv muted">
+            <b>{e.quest!.title}</b>
+            <small>{e.q.status}</small>
+          </div>
+        ))}
+        {!entries.length && <div className="muted">No quests yet.</div>}
+      </div>
+    </MenuPanel>
+  );
+}
