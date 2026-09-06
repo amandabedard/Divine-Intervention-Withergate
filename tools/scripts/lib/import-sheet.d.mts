@@ -5,7 +5,7 @@ export interface SheetPiece {
   y: number;
   w: number;
   h: number;
-  kind: 'prop' | 'tile' | 'background';
+  kind: 'prop' | 'tile';
   tags: string[];
   opaque?: number;
   id?: string;
@@ -31,6 +31,8 @@ export interface ImportSheetResult {
   pieces: SheetPiece[];
   created: number;
   existing: number;
+  /** Pieces of an earlier cut of this sheet that were dropped (only when `used` was given). */
+  removed: number;
 }
 
 export const KIND_DIRS: Record<string, string>;
@@ -44,4 +46,5 @@ export function importSheet(args: {
   options?: SheetOptions;
   dryRun?: boolean;
   keepSheet?: boolean;
+  used?: Set<string> | null;
 }): ImportSheetResult;

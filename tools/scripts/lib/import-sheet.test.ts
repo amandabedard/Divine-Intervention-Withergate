@@ -44,9 +44,9 @@ describe('importSheet', () => {
     const manifest: AssetManifest = { version: 1, assets: [] };
     const first = importSheet({ assetsDir: dir, manifest, pack: 'test', name: 'sheet.png', buffer: makeSheet() });
     const kinds = first.pieces.map((p) => p.kind).sort();
-    expect(kinds).toEqual(['prop', 'prop', 'tile', 'tile']);
-    expect(first.created).toBe(4);
-    expect(manifest.assets).toHaveLength(4);
+    expect(kinds).toEqual(['prop', 'prop', 'tile', 'tile', 'tile', 'tile']);
+    expect(first.created).toBe(6);
+    expect(manifest.assets).toHaveLength(6);
     const house = manifest.assets.find((a) => a.w === 80 && a.h === 80)!;
     expect(house).toMatchObject({ kind: 'prop', pack: 'test', pixel: true, source: { sheet: 'test/sheet.png', x: 8, y: 8 } });
     expect(house.id).toMatch(/^prop_test_sheet_\d\d$/);
@@ -54,25 +54,29 @@ describe('importSheet', () => {
     expect(fs.existsSync(path.join(dir, house.file))).toBe(true);
     const cropped = PNG.sync.read(fs.readFileSync(path.join(dir, house.file)));
     expect([cropped.width, cropped.height]).toEqual([80, 80]);
-    // the two textures are cut apart on the tile grid
+    // the two textures are cut apart, then into grid cells (the noise does not repeat, so all four stay)
     const tiles = manifest.assets.filter((a) => a.kind === 'tile');
     expect(tiles.map((t) => [t.w, t.h])).toEqual([
-      [96, 192],
-      [96, 192],
+      [96, 96],
+      [96, 96],
+      [96, 96],
+      [96, 96],
     ]);
+    expect(tiles.map((t) => t.id)).toEqual(['tile_test_sheet_01', 'tile_test_sheet_02', 'tile_test_sheet_03', 'tile_test_sheet_04']);
+    expect(manifest.assets.filter((a) => a.kind === 'prop').map((a) => a.id)).toEqual(['prop_test_sheet_01', 'prop_test_sheet_02']);
     // the original sheet is kept for re-imports
     expect(fs.existsSync(path.join(dir, '_sheets', 'test', 'sheet.png'))).toBe(true);
 
     const again = importSheet({ assetsDir: dir, manifest, pack: 'test', name: 'sheet.png', buffer: makeSheet() });
     expect(again.created).toBe(0);
-    expect(again.existing).toBe(4);
-    expect(manifest.assets).toHaveLength(4);
+    expect(again.existing).toBe(6);
+    expect(manifest.assets).toHaveLength(6);
   });
 
   it('only reports in a dry run', () => {
     const manifest: AssetManifest = { version: 1, assets: [] };
     const r = importSheet({ assetsDir: path.join(dir, 'dry'), manifest, pack: 'test', name: 'sheet.png', buffer: makeSheet(), dryRun: true });
-    expect(r.pieces).toHaveLength(4);
+    expect(r.pieces).toHaveLength(6);
     expect(manifest.assets).toHaveLength(0);
     expect(fs.existsSync(path.join(dir, 'dry'))).toBe(false);
   });

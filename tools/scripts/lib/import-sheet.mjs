@@ -26,14 +26,16 @@ export const slug = (s) =>
  * @param {object} [args.options]   slicer options (see sheet.mjs DEFAULT_OPTIONS)
  * @param {boolean} [args.dryRun]   only report what would be created
  * @param {boolean} [args.keepSheet] copy the sheet to assets/_sheets/<pack>/ for later re-imports
+ * @param {Set<string>} [args.used]  asset ids some map uses; when given, pieces of an earlier cut of this
+ *                                  sheet that no longer exist and are not used are removed (files too)
  */
-export function importSheet({ assetsDir, manifest, pack, name, buffer, options = {}, dryRun = false, keepSheet = true }) {
+export function importSheet({ assetsDir, manifest, pack, name, buffer, options = {}, dryRun = false, keepSheet = true, used = null }) {
   if (!/^[a-z][a-z0-9_]*$/.test(pack)) throw new Error('pack must be lowercase_with_underscores');
   const png = readPng(buffer);
   const { layout, pieces } = sliceSheet(png, name, options);
   const sheetRel = `${pack}/${name}`;
   const sheetSlug = slug(name);
-  const used = new Set(manifest.assets.map((a) => a.id));
+  const takenIds = new Set(manifest.assets.map((a) => a.id));
   const files = new Set(manifest.assets.map((a) => a.file));
   const W = png.width;
   const H = png.height;
@@ -54,9 +56,22 @@ export function importSheet({ assetsDir, manifest, pack, name, buffer, options =
     return mask;
   };
 
-  pieces.forEach((piece, i) => {
+  const counters = {};
+  pieces.forEach((piece) => {
     const kind = KIND_DIRS[piece.kind] ? piece.kind : 'prop';
-    const found = manifest.assets.find((a) => a.source && a.source.sheet === sheetRel && a.source.x === piece.x && a.source.y === piece.y && a.w === piece.w && a.h === piece.h);
+    // numbered per kind in reading order, so re-cutting a sheet's tiles leaves its prop ids alone
+    counters[kind] = (counters[kind] ?? 0) + 1;
+    const i = counters[kind] - 1;
+    let found = manifest.assets.find((a) => a.source && a.source.sheet === sheetRel && a.source.x === piece.x && a.source.y === piece.y && a.w === piece.w && a.h === piece.h);
+    if (found && found.kind !== kind && used && !used.has(found.id)) {
+      // the same piece, but the cutter now calls it something else: replace it unless a map uses it
+      if (!dryRun) {
+        const abs = path.join(assetsDir, found.file);
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+        manifest.assets.splice(manifest.assets.indexOf(found), 1);
+      }
+      found = null;
+    }
     if (found) {
       existing += 1;
       results.push({ ...piece, id: found.id, file: found.file, status: 'exists' });
@@ -65,8 +80,8 @@ export function importSheet({ assetsDir, manifest, pack, name, buffer, options =
     const nn = String(i + 1).padStart(2, '0');
     let id = `${kind}_${pack}_${sheetSlug}_${nn}`;
     let n = 2;
-    while (used.has(id)) id = `${kind}_${pack}_${sheetSlug}_${nn}_${n++}`;
-    used.add(id);
+    while (takenIds.has(id)) id = `${kind}_${pack}_${sheetSlug}_${nn}_${n++}`;
+    takenIds.add(id);
     let file = `${KIND_DIRS[kind]}/${pack}/${sheetSlug}_${nn}.png`;
     n = 2;
     while (files.has(file) || fs.existsSync(path.join(assetsDir, file))) file = `${KIND_DIRS[kind]}/${pack}/${sheetSlug}_${nn}_${n++}.png`;
@@ -93,10 +108,23 @@ export function importSheet({ assetsDir, manifest, pack, name, buffer, options =
     results.push({ ...piece, id, file, status: 'created' });
   });
 
+  let removed = 0;
+  if (used) {
+    const keep = new Set(results.map((r) => r.id));
+    const stale = manifest.assets.filter((a) => a.source && a.source.sheet === sheetRel && !keep.has(a.id) && !used.has(a.id));
+    for (const a of stale) {
+      if (!dryRun) {
+        const abs = path.join(assetsDir, a.file);
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+        manifest.assets.splice(manifest.assets.indexOf(a), 1);
+      }
+      removed += 1;
+    }
+  }
   if (!dryRun && keepSheet) {
     const dst = path.join(assetsDir, '_sheets', pack, name);
     fs.mkdirSync(path.dirname(dst), { recursive: true });
     if (!fs.existsSync(dst)) fs.writeFileSync(dst, buffer);
   }
-  return { layout, width: W, height: H, pieces: results.map(({ cells, ...p }) => p), created, existing };
+  return { layout, width: W, height: H, pieces: results.map(({ cells, ...p }) => p), created, existing, removed };
 }

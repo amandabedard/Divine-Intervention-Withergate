@@ -9,9 +9,9 @@
 //     the edge between them is a transparent gap, an outline meeting an outline,
 //     or a strong colour change (see cellGroups);
 //  2. a group of completely opaque cells is a texture block: it is cut where the
-//     texture visibly changes (on the 48px tile grid) and diced where the pattern
-//     repeats every cell; a block of three cells or more each way with no grid
-//     structure is kept whole as a background;
+//     texture visibly changes (on the 48px tile grid) and then into single grid
+//     cells, dropping cells that only repeat the one before them, so every
+//     texture ends up as tiles that can be placed with repeatX;
 //  3. any other group is a prop region: trim it to its opaque bounding box, cut
 //     it where a fully transparent row or column runs across it (or where a line
 //     near a grid line is almost transparent, for props that bleed a few pixels
@@ -222,35 +222,6 @@ function cutRegion(png, mask, region, opts, out) {
   }
 }
 
-/**
- * How much stronger the colour boundaries on the layout grid are than boundaries
- * elsewhere: about 1 for a scene or a single texture, well above for a tile grid.
- */
-function gridness(png, mask, r, opts) {
-  const L = opts.layout;
-  let on = 0;
-  let onN = 0;
-  let off = 0;
-  let offN = 0;
-  for (const axis of ['x', 'y']) {
-    const start = axis === 'x' ? r.x : r.y;
-    const length = axis === 'x' ? r.w : r.h;
-    const first = Math.ceil((start + 12) / L) * L;
-    for (let g = first; g <= start + length - 12; g += L) {
-      on += strengthNear(png, mask, r, axis, g, 3).strength;
-      onN += 1;
-      for (const o of [L / 4, (3 * L) / 4]) {
-        if (g - o > start + 12) {
-          off += strengthNear(png, mask, r, axis, g - o, 3).strength;
-          offN += 1;
-        }
-      }
-    }
-  }
-  if (!onN || !offN) return 1;
-  return on / onN / Math.max(1, off / offN);
-}
-
 /** Share of opaque pixel pairs one step of `shift` apart along `axis` that have the same colour. */
 function similarity(png, mask, r, axis, shift) {
   const { width: W, data } = png;
@@ -268,6 +239,65 @@ function similarity(png, mask, r, axis, shift) {
     }
   }
   return n ? same / n : 0;
+}
+
+/** Share of matching pixels between two equal-sized rects (both opaque, within a small colour tolerance). */
+function rectSimilarity(png, mask, a, b) {
+  const { width: W, data } = png;
+  let same = 0;
+  let n = 0;
+  for (let y = 0; y < a.h; y += 2) {
+    for (let x = 0; x < a.w; x += 1) {
+      const p = (a.y + y) * W + a.x + x;
+      const q = (b.y + y) * W + b.x + x;
+      if (!mask[p] || !mask[q]) continue;
+      n += 1;
+      if (Math.abs(data[p * 4] - data[q * 4]) <= 12 && Math.abs(data[p * 4 + 1] - data[q * 4 + 1]) <= 12 && Math.abs(data[p * 4 + 2] - data[q * 4 + 2]) <= 12) same += 1;
+    }
+  }
+  return n ? same / n : 0;
+}
+
+/** Cut lines at multiples of `L` strictly inside [start, start+len), never leaving a sliver under 24px. */
+function gridCuts(start, len, L) {
+  const cuts = [];
+  for (let g = Math.ceil((start + 1) / L) * L; g < start + len; g += L) {
+    if (g - start >= 24 && start + len - g >= 24) cuts.push(g);
+  }
+  return cuts;
+}
+
+/**
+ * Cut a texture block into single grid cells (both axes). A cell that merely
+ * repeats the previous one along the cut axis is dropped, so a seamless strip
+ * of one texture becomes one tile and a strip of different tiles keeps them all.
+ */
+function diceCells(png, mask, r, opts) {
+  const L = opts.layout;
+  let parts = [r];
+  for (const axis of ['x', 'y']) {
+    const next = [];
+    for (const part of parts) {
+      const start = axis === 'x' ? part.x : part.y;
+      const len = axis === 'x' ? part.w : part.h;
+      const cuts = gridCuts(start, len, L);
+      if (!cuts.length) {
+        next.push(part);
+        continue;
+      }
+      let prev = start;
+      let kept = null;
+      for (const c of [...cuts, start + len]) {
+        const piece = axis === 'x' ? { x: prev, y: part.y, w: c - prev, h: part.h } : { x: part.x, y: prev, w: part.w, h: c - prev };
+        prev = c;
+        if (kept && kept.w === piece.w && kept.h === piece.h && rectSimilarity(png, mask, kept, piece) >= 0.6) continue;
+        next.push(piece);
+        kept = piece;
+      }
+    }
+    parts = next;
+  }
+  return parts;
 }
 
 /** Split a region of k cells along an axis if its content repeats every cell. */
@@ -300,8 +330,6 @@ const nearMultiple = (v, m, tol) => Math.abs(v - Math.round(v / m) * m) <= tol;
 function classify(mask, W, r, opts) {
   const opaque = opaqueFraction(mask, W, r);
   const gridSized = nearMultiple(r.w, opts.cell, 5) && nearMultiple(r.h, opts.cell, 5) && r.w >= opts.cell - 5 && r.h >= opts.cell - 5;
-  // anything three cells or more each way is a scene (a sample map, a backdrop), not a prop
-  if (r.w >= 3 * opts.layout - 8 && r.h >= 3 * opts.layout - 8) return { opaque, kind: 'background' };
   return { opaque, kind: opaque >= 0.96 && gridSized ? 'tile' : 'prop' };
 }
 
@@ -385,8 +413,9 @@ function edgeStats(png, mask, dark, axis, g, s0, L) {
 /**
  * Group the sheet's grid cells into pieces: neighbouring cells stay together
  * unless the edge between them is a gap, an outline against an outline, or a
- * strong colour change. Fully opaque cells always stay with fully opaque
- * neighbours (texture blocks are cut separately, by texture).
+ * strong colour change. Fully opaque cells are texture: they always stay with
+ * fully opaque neighbours and never join a prop cell (texture blocks are cut
+ * separately, by texture, into tiles).
  */
 function cellGroups(png, mask, opts) {
   const { width: W, height: H } = png;
@@ -408,13 +437,12 @@ function cellGroups(png, mask, opts) {
     for (let c = 0; c < cols; c += 1) {
       const i = r * cols + c;
       if (!fill[i]) continue;
-      if (c + 1 < cols && fill[i + 1]) {
-        if (full[i] && full[i + 1]) unite(i, i + 1);
-        else if (!separated(edgeStats(png, mask, dark, 'x', (c + 1) * L, r * L, rect(c, r).h))) unite(i, i + 1);
+      // completely opaque cells are texture; they stay with each other and never join a prop cell
+      if (c + 1 < cols && fill[i + 1] && full[i] === full[i + 1]) {
+        if (full[i] || !separated(edgeStats(png, mask, dark, 'x', (c + 1) * L, r * L, rect(c, r).h))) unite(i, i + 1);
       }
-      if (r + 1 < rows && fill[i + cols]) {
-        if (full[i] && full[i + cols]) unite(i, i + cols);
-        else if (!separated(edgeStats(png, mask, dark, 'y', (r + 1) * L, c * L, rect(c, r).w))) unite(i, i + cols);
+      if (r + 1 < rows && fill[i + cols] && full[i] === full[i + cols]) {
+        if (full[i] || !separated(edgeStats(png, mask, dark, 'y', (r + 1) * L, c * L, rect(c, r).w))) unite(i, i + cols);
       }
     }
   }
@@ -527,7 +555,7 @@ function dedupe(png, pieces) {
 
 /**
  * Find every piece on a sheet.
- * @returns {{ layout: string, pieces: { x:number, y:number, w:number, h:number, kind:'prop'|'tile'|'background', tags:string[] }[] }}
+ * @returns {{ layout: string, pieces: { x:number, y:number, w:number, h:number, kind:'prop'|'tile', tags:string[] }[] }}
  */
 export function sliceSheet(png, name = '', options = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
@@ -539,22 +567,21 @@ export function sliceSheet(png, name = '', options = {}) {
     return { layout: fixed.layout, pieces: dedupe(png, pieces) };
   }
   const pieces = [];
-  const L = opts.layout;
   const groupMask = new Uint8Array(W * H);
   for (const group of cellGroups(png, mask, opts)) {
     groupMask.fill(0);
     for (const c of group.cells) for (let y = c.y; y < c.y + c.h; y += 1) groupMask.set(mask.subarray(y * W + c.x, y * W + c.x + c.w), y * W + c.x);
     if (group.full) {
-      const block = group.rect;
-      const scene = block.w >= 3 * L && block.h >= 3 * L && gridness(png, groupMask, block, opts) < 1.5;
       const parts = [];
-      if (scene || !opts.cutTiles) parts.push(block);
-      else cutRegion(png, groupMask, block, opts, parts);
+      if (opts.cutTiles) cutRegion(png, groupMask, group.rect, opts, parts);
+      else parts.push(group.rect);
       for (const part of parts) {
         const t = trimRect(groupMask, W, part);
         if (!t) continue;
-        for (const d of scene ? [t] : dice(png, groupMask, t, opts)) {
-          pieces.push({ ...d, kind: scene ? 'background' : 'tile', tags: scene ? ['scene'] : [], opaque: 1 });
+        for (const d of opts.cutTiles ? diceCells(png, groupMask, t, opts) : [t]) {
+          const tt = trimRect(groupMask, W, d);
+          if (!tt || Math.min(tt.w, tt.h) < 16) continue;
+          pieces.push({ ...tt, kind: 'tile', tags: [], opaque: 1, cells: group.cells });
         }
       }
       continue;
@@ -585,7 +612,7 @@ export function cropPng(png, r, mask = null) {
   return out;
 }
 
-/** Debug: the sheet with piece outlines drawn on it (green props, cyan tiles, magenta scenes). */
+/** Debug: the sheet with piece outlines drawn on it (green props, cyan tiles). */
 export function overlayPng(png, pieces) {
   const out = new PNG({ width: png.width, height: png.height });
   png.data.copy(out.data);

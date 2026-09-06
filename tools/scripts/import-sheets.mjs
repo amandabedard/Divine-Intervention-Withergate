@@ -17,6 +17,7 @@
 //   --no-cut           never cut full-bleed blocks into tiles
 //   --layout <px>      packing grid of the sheets (default 96)
 //   --cell <px>        tile grid inside texture blocks (default 48)
+//   --prune-stale      drop pieces of an earlier cut of these sheets that no longer exist and no map uses
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,7 +29,7 @@ const ASSETS = path.join(ROOT, 'assets');
 const MANIFEST = path.join(ASSETS, 'manifest.json');
 
 const args = process.argv.slice(2);
-const opt = { pack: '', dry: false, debug: '', cut: true, layout: 96, cell: 48 };
+const opt = { pack: '', dry: false, debug: '', cut: true, layout: 96, cell: 48, pruneStale: false };
 const inputs = [];
 for (let i = 0; i < args.length; i += 1) {
   const a = args[i];
@@ -36,6 +37,7 @@ for (let i = 0; i < args.length; i += 1) {
   else if (a === '--dry') opt.dry = true;
   else if (a === '--debug') opt.debug = args[++i] ?? '';
   else if (a === '--no-cut') opt.cut = false;
+  else if (a === '--prune-stale') opt.pruneStale = true;
   else if (a === '--layout') opt.layout = Number(args[++i]);
   else if (a === '--cell') opt.cell = Number(args[++i]);
   else inputs.push(a);
@@ -60,20 +62,34 @@ for (const input of inputs) {
 }
 
 const manifest = fs.existsSync(MANIFEST) ? JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) : { version: 1, assets: [] };
+/** Asset ids placed on any map, so a re-cut never drops something in use. */
+function usedAssets() {
+  const used = new Set();
+  const dir = path.join(ROOT, 'content', 'maps');
+  if (!fs.existsSync(dir)) return used;
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.map.json')) continue;
+    for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/"asset":\s*"([a-z0-9_]+)"/g)) used.add(m[1]);
+  }
+  return used;
+}
+const used = opt.pruneStale ? usedAssets() : null;
 let created = 0;
 let existing = 0;
+let removed = 0;
 for (const file of files) {
   const buffer = fs.readFileSync(file);
   const name = path.basename(file);
-  const r = importSheet({ assetsDir: ASSETS, manifest, pack: opt.pack, name, buffer, options: { cutTiles: opt.cut, layout: opt.layout, cell: opt.cell }, dryRun: opt.dry });
+  const r = importSheet({ assetsDir: ASSETS, manifest, pack: opt.pack, name, buffer, options: { cutTiles: opt.cut, layout: opt.layout, cell: opt.cell }, dryRun: opt.dry, used });
   created += r.created;
   existing += r.existing;
+  removed += r.removed;
   const kinds = r.pieces.reduce((acc, p) => ({ ...acc, [p.kind]: (acc[p.kind] ?? 0) + 1 }), {});
-  console.log(`${opt.pack}/${name.padEnd(28)} ${r.layout.padEnd(5)} ${String(r.pieces.length).padStart(3)} pieces  ${Object.entries(kinds).map(([k, n]) => `${n} ${k}`).join(', ')}${r.existing ? `  (${r.existing} already imported)` : ''}`);
+  console.log(`${opt.pack}/${name.padEnd(28)} ${r.layout.padEnd(5)} ${String(r.pieces.length).padStart(3)} pieces  ${Object.entries(kinds).map(([k, n]) => `${n} ${k}`).join(', ')}${r.existing ? `  (${r.existing} already imported)` : ''}${r.removed ? `  (${r.removed} stale dropped)` : ''}`);
   if (opt.debug) {
     fs.mkdirSync(opt.debug, { recursive: true });
     fs.writeFileSync(path.join(opt.debug, `${opt.pack}_${name}`), writePng(overlayPng(readPng(buffer), r.pieces)));
   }
 }
 if (!opt.dry) fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
-console.log(`${opt.dry ? 'would create' : 'created'} ${created} asset(s), ${existing} already present, manifest now ${manifest.assets.length} entries`);
+console.log(`${opt.dry ? 'would create' : 'created'} ${created} asset(s), ${existing} already present${opt.pruneStale ? `, ${opt.dry ? 'would drop' : 'dropped'} ${removed} stale` : ''}, manifest now ${manifest.assets.length} entries`);

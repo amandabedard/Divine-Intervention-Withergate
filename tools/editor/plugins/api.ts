@@ -230,7 +230,8 @@ export function editorApiPlugin({ repoRoot }: { repoRoot: string }): Plugin {
         if (!validId(pack)) return json(res, 400, { error: 'pack must be lowercase_with_underscores' });
         const name = path.basename(String(body.name ?? 'sheet.png')).replace(/[^a-zA-Z0-9._-]+/g, '_');
         const options = typeof body.options === 'object' && body.options ? body.options : {};
-        const result = importSheet({ assetsDir, manifest, pack, name, buffer: Buffer.from(m[1]!, 'base64'), options, dryRun: !!body.dryRun });
+        const inUse = new Set(Object.keys(usage()));
+        const result = importSheet({ assetsDir, manifest, pack, name, buffer: Buffer.from(m[1]!, 'base64'), options, dryRun: !!body.dryRun, used: inUse });
         if (!body.dryRun) writeManifest(manifest);
         return json(res, 200, result);
       }
