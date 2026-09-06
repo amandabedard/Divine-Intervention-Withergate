@@ -36,6 +36,8 @@ class Session {
   private interp: Interpreter | null = null;
   private onDone: ((mode: DoneMode) => void) | null = null;
   private queued: (() => void)[] = [];
+  /** The ctx the running script shares, so effects and the requests they queue reach one place. */
+  private dialogCtx: Ctx | null = null;
 
   // -- context ---------------------------------------------------------------
 
@@ -67,11 +69,9 @@ class Session {
         this.after(() => bus.emit('world.enter', { map: r.map, spawn: r.spawn }));
         break;
       }
-      case 'cutscene': {
-        const c = store.content.cutscenes[r.id];
-        if (c) this.after(() => this.runScript(c.script, `cutscene:${r.id}`, undefined, () => this.setWorld()));
+      case 'cutscene':
+        this.after(() => this.runCutscene(r.id));
         break;
-      }
       case 'event': {
         const ev = this.findEvent(r.id);
         if (ev) this.after(() => this.playEvent(ev));
@@ -112,6 +112,7 @@ class Session {
         stats: { charisma: 5, intelligence: 5, luck: 5, dexterity: 5, perception: 5 },
         startMap: map,
         startSpawn: params.get('spawn') ?? undefined,
+        skipOpening: true,
       });
       return;
     }
@@ -131,8 +132,15 @@ class Session {
     store.updateUi({ mode: 'title' });
   }
 
-  newGame(opts: NewGameOptions): void {
-    const state = newGame(store.content, opts);
+  /** Start a new game. The opening cutscene plays on the landing map unless skipOpening is set. */
+  newGame(opts: NewGameOptions & { skipOpening?: boolean }): void {
+    const opening = store.content.cutscenes.opening;
+    const landing = opening?.stage?.map && store.content.maps[opening.stage.map] ? opening.stage.map : null;
+    const state = newGame(store.content, {
+      ...opts,
+      startMap: opts.startMap ?? (!opts.skipOpening && landing ? landing : undefined),
+    });
+    if (!opts.skipOpening && landing && !opts.startMap) state.flags.opening_pending = true;
     this.enterGame(state);
   }
 
@@ -142,6 +150,7 @@ class Session {
       form: 'fem',
       label: 'cool',
       stats: { charisma: 5, intelligence: 5, luck: 5, dexterity: 5, perception: 5 },
+      skipOpening: true,
     });
   }
 
@@ -155,6 +164,7 @@ class Session {
   private enterGame(state: GameState): void {
     this.interp = null;
     this.onDone = null;
+    this.dialogCtx = null;
     this.queued = [];
     store.setState(state);
     store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false });
@@ -237,10 +247,7 @@ class Session {
         ctx.state.town.resources[a.resource] += amount;
         ctx.state.flags[key] = ctx.state.time.day;
         this.flush(ctx);
-        this.runSteps(
-          [{ kind: 'line', speaker: 'narrate', text: `You gather ${amount} ${a.resource}. It will go to Withergate's stores.` }],
-          key,
-        );
+        this.runSteps([{ kind: 'line', speaker: 'narrate', text: `You gather ${amount} ${a.resource}.` }], key);
         break;
       }
       case 'facility':
@@ -269,10 +276,59 @@ class Session {
     return true;
   }
 
-  /** Called by the world scene once a map is built; fires enter_map heart events. */
+  /** Place the stage's actors and run a cutscene on the current map. */
+  runCutscene(id: string): void {
+    const c = store.content.cutscenes[id];
+    if (!c || !store.state) return;
+    for (const [who, at] of Object.entries(c.stage?.place ?? {})) {
+      bus.emit('stage', { step: { kind: 'stage', op: 'place', args: { who, at } }, done: () => undefined });
+    }
+    store.updateUi({ mode: 'dialog', talk: null });
+    this.runScript(c.script, `cutscene:${id}`, undefined, () => this.setWorld());
+  }
+
+  /** A trigger zone was entered. Returns true when something started. */
+  fireTrigger(t: EntityOf<'trigger'>): boolean {
+    if (!store.state || this.interp) return false;
+    const ctx = this.ctx();
+    const key = `trigger:${ctx.state.where.map}:${t.id}`;
+    if (t.once && ctx.state.flags[key]) return false;
+    if (t.requires && !evaluate(t.requires, ctx)) return false;
+    ctx.state.flags[key] = true;
+    store.commit();
+    switch (t.action.kind) {
+      case 'run_script': {
+        const s = store.content.shared[t.action.script];
+        if (!s) return false;
+        store.updateUi({ mode: 'dialog', talk: null });
+        this.runScript(s, t.action.script, undefined, () => this.setWorld());
+        return true;
+      }
+      case 'start_event': {
+        const ev = this.findEvent(t.action.event);
+        if (!ev) return false;
+        this.playEvent(ev);
+        return true;
+      }
+      case 'start_cutscene':
+        this.runCutscene(t.action.cutscene);
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** Called by the world scene once a map is built; runs the opening, quest checks and enter_map heart events. */
   onMapEntered(mapId: string): void {
     if (!store.state || this.interp) return;
     const ctx = this.ctx();
+    if (ctx.state.flags.opening_pending) {
+      delete ctx.state.flags.opening_pending;
+      this.flush(ctx);
+      this.runCutscene('opening');
+      return;
+    }
+    this.flush(ctx);
     const candidates: HeartEvent[] = [];
     for (const v of Object.values(store.content.villagers)) {
       for (const ev of v.events) {
@@ -347,6 +403,7 @@ class Session {
   exitTalk(): void {
     this.interp = null;
     this.onDone = null;
+    this.dialogCtx = null;
     store.updateUi({ mode: 'world', talk: null, line: null, choices: null, roll: null, dialogActive: false });
     this.drainQueue();
   }
@@ -563,6 +620,7 @@ class Session {
 
   runScript(script: Script, id: string, speaker?: string, onDone?: (mode: DoneMode) => void): void {
     const ctx = this.ctx(speaker);
+    this.dialogCtx = ctx;
     this.interp = new Interpreter(ctx, script, id);
     this.onDone = onDone ?? (() => this.setWorld());
     store.updateUi({ mode: 'dialog', line: null, choices: null, roll: null });
@@ -612,11 +670,15 @@ class Session {
         return;
       case 'done': {
         this.interp = null;
+        this.dialogCtx = null;
         store.updateUi({ line: null, choices: null, roll: null, dialogActive: false });
         const cb = this.onDone;
         this.onDone = null;
-        this.flush(ctx);
+        // Let the finished script's owner settle the UI first (back to the menu or the
+        // world), then flush requests such as start_cutscene so a follow-up scene is not
+        // immediately overwritten by that owner.
         cb?.(o.mode);
+        this.flush(ctx);
         return;
       }
       default:
@@ -626,22 +688,18 @@ class Session {
   }
 
   advanceDialog(): void {
-    if (!this.interp) return;
+    if (!this.interp || !this.dialogCtx) return;
     if (store.ui.choices) return;
     if (store.ui.roll) store.updateUi({ roll: null });
-    this.pump(this.ctx(this.speakerOf()));
+    this.pump(this.dialogCtx);
   }
 
   chooseOption(index: number): void {
-    if (!this.interp) return;
+    if (!this.interp || !this.dialogCtx) return;
     const out = this.interp.choose(index);
     if (!out) return;
     store.updateUi({ choices: null });
-    this.pump(this.ctx(this.speakerOf()), out);
-  }
-
-  private speakerOf(): string | undefined {
-    return store.ui.talk?.villager ?? store.ui.line?.speaker;
+    this.pump(this.dialogCtx, out);
   }
 
   private toLine(speaker: string, text: string, mood: string | undefined, loc?: string): DialogLine {

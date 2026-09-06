@@ -65,7 +65,7 @@
       },
       {
         "asset": "placeholder",
-        "x": 2040,
+        "x": 2110,
         "y": 520,
         "w": 80,
         "h": 100,
@@ -157,7 +157,7 @@
     {
       "type": "interactable",
       "id": "notice_board",
-      "x": 2030,
+      "x": 2100,
       "y": 520,
       "w": 100,
       "h": 100,
@@ -170,21 +170,21 @@
     {
       "type": "facility_slot",
       "id": "slot_1",
-      "x": 2200,
+      "x": 2420,
       "y": 620,
       "size": "large"
     },
     {
       "type": "facility_slot",
       "id": "slot_2",
-      "x": 2620,
+      "x": 2820,
       "y": 620,
       "size": "large"
     },
     {
       "type": "facility_slot",
       "id": "slot_3",
-      "x": 3000,
+      "x": 3160,
       "y": 620,
       "size": "small"
     },
@@ -198,7 +198,7 @@
     {
       "type": "facility_slot",
       "id": "slot_5",
-      "x": 1880,
+      "x": 1960,
       "y": 620,
       "size": "small"
     },
@@ -226,7 +226,7 @@
     {
       "type": "npc_spot",
       "id": "lumber_pile",
-      "x": 2450,
+      "x": 3020,
       "y": 620,
       "facing": "right"
     },

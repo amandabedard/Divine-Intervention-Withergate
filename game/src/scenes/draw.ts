@@ -66,7 +66,7 @@ export function drawGround(scene: Phaser.Scene, map: GameMap): void {
   g.fillRect(0, map.ground_y, map.size.width, map.size.height - map.ground_y);
   const path = Phaser.Display.Color.IntegerToColor(ground).lighten(12).color;
   g.fillStyle(path, 1);
-  g.fillRect(0, map.ground_y - 4, map.size.width, 30);
+  g.fillRect(0, map.ground_y - 4, map.size.width, 40);
   g.setDepth(DEPTH.ground);
   if (map.interior) {
     // wall skirting

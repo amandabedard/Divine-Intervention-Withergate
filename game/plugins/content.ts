@@ -50,12 +50,14 @@ export function contentPlugin(opts: { contentDir: string; generatedDir: string; 
     configureServer(server) {
       server.watcher.add(opts.contentDir);
     },
-    handleHotUpdate({ file, server }) {
+    // Vite 6+ hook: fires for created, changed and deleted files, so a brand-new
+    // villager folder or map shows up without restarting the dev server.
+    hotUpdate({ file }) {
       if (!file.replace(/\\/g, '/').startsWith(contentDir)) return undefined;
       cached = null;
-      const mod = server.moduleGraph.getModuleById(RESOLVED);
+      const mod = this.environment.moduleGraph.getModuleById(RESOLVED);
       if (!mod) return undefined;
-      server.moduleGraph.invalidateModule(mod);
+      this.environment.moduleGraph.invalidateModule(mod);
       return [mod];
     },
   };

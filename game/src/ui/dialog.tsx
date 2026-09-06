@@ -1,16 +1,60 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { tierForPoints } from '@withergate/shared';
-import type { Snapshot } from '../bridge/store';
+import type { Marker } from '@withergate/shared';
+import type { DialogChoice, Snapshot } from '../bridge/store';
 import { ROMANCE_LABELS, TIER_LABELS } from '../core/relationships';
 import { session } from '../core/session';
 import { villagerState } from '../core/state';
+import { onNav, useMenuNav } from './nav';
 
-export const ADVANCE_EVENT = 'wg-advance';
+interface MenuItem {
+  label: string;
+  run: () => void;
+  marker?: Marker;
+  note?: string;
+  hotkey?: number;
+}
 
 export function TalkMenu({ snap }: { snap: Snapshot }) {
   const talk = snap.ui.talk!;
+  const view = talk.view;
   const bundle = snap.content.villagers[talk.villager];
   const rel = villagerState(snap.state!, snap.content, talk.villager);
+
+  const items = useMemo<MenuItem[]>(() => {
+    if (view === 'menu') {
+      return [
+        { label: 'Chat', hotkey: 1, run: () => session.chat() },
+        { label: 'Discuss', hotkey: 2, run: () => session.setTalkView('topics') },
+        { label: 'Flirt', hotkey: 3, run: () => session.flirt() },
+        { label: 'Give gift', hotkey: 4, run: () => session.setTalkView('gifts') },
+        { label: 'Exit', hotkey: 5, run: () => session.exitTalk() },
+      ];
+    }
+    if (view === 'topics') {
+      return [
+        ...session.availableTopics(talk.villager).map((t) => ({ label: t.label, marker: t.marker, run: () => session.discuss(t.id) })),
+        { label: 'Back', run: () => session.setTalkView('menu') },
+      ];
+    }
+    return [
+      ...session.giftOptions().map((g) => ({
+        label: `${g.name}${g.count > 1 ? ` ×${g.count}` : ''}`,
+        note: g.source,
+        run: () => session.giveGift(g.id, g.source),
+      })),
+      { label: 'Back', run: () => session.setTalkView('menu') },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, talk.villager, snap.version]);
+
+  const nav = useMenuNav({
+    items,
+    resetKey: view,
+    onSelect: (item) => item.run(),
+    onCancel: () => (view === 'menu' ? session.exitTalk() : session.setTalkView('menu')),
+  });
+
   if (!bundle) return null;
   const tier = tierForPoints(rel.friendship);
   const romance = ROMANCE_LABELS[rel.romanceState];
@@ -27,64 +71,22 @@ export function TalkMenu({ snap }: { snap: Snapshot }) {
             {romance ? ` · ${romance}` : ''}
           </span>
         </div>
-        {talk.view === 'menu' && (
-          <div className="talk-actions">
-            <button onClick={() => session.chat()}>
-              <kbd>1</kbd> Chat
+        <div className="talk-list">
+          {view === 'topics' && items.length === 1 && <div className="muted">Nothing to discuss right now.</div>}
+          {view === 'gifts' && items.length === 1 && (
+            <div className="muted">You have nothing to give. Gifts come from your satchel, or from storage while in Withergate.</div>
+          )}
+          {items.map((it, i) => (
+            <button key={`${view}:${i}`} {...nav.itemProps(i)} onClick={it.run}>
+              {it.hotkey !== undefined && <kbd>{it.hotkey}</kbd>}
+              {it.marker && it.marker !== 'none' && <span className={`marker ${it.marker}`}>{it.marker === 'quest' ? '!' : '♥'}</span>}
+              {it.label}
+              {it.note && <small className="muted"> ({it.note})</small>}
             </button>
-            <button onClick={() => session.setTalkView('topics')}>
-              <kbd>2</kbd> Discuss
-            </button>
-            <button onClick={() => session.flirt()}>
-              <kbd>3</kbd> Flirt
-            </button>
-            <button onClick={() => session.setTalkView('gifts')}>
-              <kbd>4</kbd> Give gift
-            </button>
-            <button className="subtle" onClick={() => session.exitTalk()}>
-              <kbd>5</kbd> Exit
-            </button>
-          </div>
-        )}
-        {talk.view === 'topics' && <Topics villager={talk.villager} />}
-        {talk.view === 'gifts' && <Gifts />}
+          ))}
+        </div>
+        <div className="hint small">↑↓ choose · Enter select · Esc back</div>
       </div>
-    </div>
-  );
-}
-
-function Topics({ villager }: { villager: string }) {
-  const topics = session.availableTopics(villager);
-  return (
-    <div className="talk-list">
-      {topics.length === 0 && <div className="muted">Nothing to discuss right now.</div>}
-      {topics.map((t) => (
-        <button key={t.id} onClick={() => session.discuss(t.id)}>
-          <span className={`marker ${t.marker}`}>{t.marker === 'quest' ? '!' : t.marker === 'heart' ? '♥' : ''}</span>
-          {t.label}
-        </button>
-      ))}
-      <button className="subtle" onClick={() => session.setTalkView('menu')}>
-        Back
-      </button>
-    </div>
-  );
-}
-
-function Gifts() {
-  const options = session.giftOptions();
-  return (
-    <div className="talk-list">
-      {options.length === 0 && <div className="muted">You have nothing to give. Gifts come from your satchel, or from storage while in Withergate.</div>}
-      {options.map((o) => (
-        <button key={`${o.source}:${o.id}`} onClick={() => session.giveGift(o.id, o.source)}>
-          {o.name}
-          {o.count > 1 ? ` ×${o.count}` : ''} <small className="muted">({o.source})</small>
-        </button>
-      ))}
-      <button className="subtle" onClick={() => session.setTalkView('menu')}>
-        Back
-      </button>
     </div>
   );
 }
@@ -105,23 +107,42 @@ function useTypewriter(text: string, msPerChar = 16) {
     }, msPerChar);
     return () => window.clearInterval(id);
   }, [text, msPerChar]);
-  return { visible: text.slice(0, shown), done: shown >= text.length, finish: () => setShown(text.length) };
+  const finish = useCallback(() => setShown(text.length), [text]);
+  return { visible: text.slice(0, shown), done: shown >= text.length, finish };
 }
 
 export function DialogBox({ snap }: { snap: Snapshot }) {
   const { line, choices, roll } = snap.ui;
   const tw = useTypewriter(line?.text ?? '');
+  const unlocked = useMemo<DialogChoice[]>(() => choices?.filter((c) => !c.locked) ?? [], [choices]);
   const showChoices = !!choices && (tw.done || !line);
 
-  useEffect(() => {
-    const onAdvance = () => {
-      if (roll) return;
-      if (line && !tw.done) tw.finish();
-      else if (!choices) session.advanceDialog();
-    };
-    window.addEventListener(ADVANCE_EVENT, onAdvance);
-    return () => window.removeEventListener(ADVANCE_EVENT, onAdvance);
-  }, [line, choices, roll, tw]);
+  const nav = useMenuNav({
+    items: unlocked,
+    enabled: showChoices,
+    resetKey: choices,
+    onSelect: (c) => session.chooseOption(c.index),
+  });
+
+  const advance = useCallback(() => {
+    if (roll) {
+      session.advanceDialog();
+      return;
+    }
+    if (line && !tw.done) {
+      tw.finish();
+      return;
+    }
+    if (!choices) session.advanceDialog();
+  }, [roll, line, tw.done, tw.finish, choices]);
+
+  useEffect(
+    () =>
+      onNav((a) => {
+        if (a === 'confirm' && !showChoices) advance();
+      }),
+    [advance, showChoices],
+  );
 
   useEffect(() => {
     if (!roll) return;
@@ -129,9 +150,8 @@ export function DialogBox({ snap }: { snap: Snapshot }) {
     return () => window.clearTimeout(id);
   }, [roll]);
 
-  const unlocked = choices?.filter((c) => !c.locked) ?? [];
   return (
-    <div className={`dialog ${line?.narrate ? 'narrate' : ''}`} onClick={() => window.dispatchEvent(new Event(ADVANCE_EVENT))}>
+    <div className={`dialog ${line?.narrate ? 'narrate' : ''}`} onClick={advance}>
       {line?.bust && <img className="bust" src={line.bust} alt="" />}
       <div className="box">
         {line && !line.narrate && <div className="name">{line.name}</div>}
@@ -149,10 +169,18 @@ export function DialogBox({ snap }: { snap: Snapshot }) {
         {showChoices && (
           <div className="choices" onClick={(e) => e.stopPropagation()}>
             {choices!.map((c) => {
-              const n = unlocked.indexOf(c) + 1;
+              const ui = unlocked.indexOf(c);
+              const focused = ui >= 0 && ui === nav.index;
               return (
-                <button key={c.index} disabled={c.locked} title={c.locked ? c.lockedText : ''} onClick={() => session.chooseOption(c.index)}>
-                  {!c.locked && <kbd>{n}</kbd>}
+                <button
+                  key={c.index}
+                  className={focused ? 'focused' : ''}
+                  disabled={c.locked}
+                  title={c.locked ? c.lockedText : ''}
+                  onMouseEnter={() => ui >= 0 && nav.setIndex(ui)}
+                  onClick={() => session.chooseOption(c.index)}
+                >
+                  {!c.locked && <kbd>{ui + 1}</kbd>}
                   {c.locked ? `🔒 ${c.lockedText ?? c.text}` : c.text}
                 </button>
               );

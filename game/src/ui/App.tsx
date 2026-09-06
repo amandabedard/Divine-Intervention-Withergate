@@ -4,67 +4,95 @@ import { session } from '../core/session';
 import { DebugPanel } from './debug';
 import { DialogBox, TalkMenu } from './dialog';
 import { Hud, Toasts } from './hud';
+import { dispatchNav, keyToNav, startGamepadPolling } from './nav';
 import { Panel } from './panels';
 import { CreationScreen, TitleScreen } from './screens';
+
+/** Modes where menus own the input (the world scene reads the keyboard itself otherwise). */
+const menuActive = (): boolean => {
+  const m = session.uiState().mode;
+  return m !== 'world' && m !== 'boot' && m !== 'creation';
+};
 
 export function App() {
   const snap = useStore();
   const { ui, state } = snap;
 
   useEffect(() => {
+    startGamepadPolling(menuActive);
+
+    // Buttons must not keep keyboard focus, or Enter/Space would fire them twice
+    // (native click plus the menu's confirm). Mouse clicks still work.
+    const onMouseDown = (e: MouseEvent) => {
+      if ((e.target as HTMLElement | null)?.closest('button')) e.preventDefault();
+    };
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.repeat) return;
       const target = e.target as HTMLElement | null;
-      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      const typing =
+        !!target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
       if (e.key === '`' && !typing) {
         e.preventDefault();
-        session.toggleDebug();
+        if (!e.repeat) session.toggleDebug();
         return;
       }
       if (typing) return;
       const u = session.uiState();
-      if (u.mode === 'dialog') {
-        if (u.dialogActive) {
-          if (u.choices) {
-            const n = Number(e.key);
-            if (n >= 1 && n <= 9) {
-              const choice = u.choices.filter((c) => !c.locked)[n - 1];
-              if (choice) session.chooseOption(choice.index);
-            }
-            return;
-          }
-          if (e.key === 'e' || e.key === 'E' || e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            session.advanceDialog();
-          }
-          return;
-        }
-        if (u.talk) {
-          if (e.key === 'Escape') {
-            if (u.talk.view === 'menu') session.exitTalk();
-            else session.setTalkView('menu');
-            return;
-          }
-          if (u.talk.view === 'menu') {
-            const n = Number(e.key);
-            if (n === 1) session.chat();
-            else if (n === 2) session.setTalkView('topics');
-            else if (n === 3) session.flirt();
-            else if (n === 4) session.setTalkView('gifts');
-            else if (n === 5) session.exitTalk();
-          }
-        }
+      if (u.mode === 'world' || u.mode === 'boot') return;
+      if (u.mode === 'creation') {
+        if (e.key === 'Escape' && !e.repeat) session.backToTitle();
         return;
       }
-      if (u.mode === 'panel' && e.key === 'Escape') session.closePanel();
+
+      // Number hotkeys for the talk menu and dialog choices.
+      if (!e.repeat && u.mode === 'dialog') {
+        const n = Number(e.key);
+        if (n >= 1 && n <= 9) {
+          if (u.dialogActive && u.choices) {
+            const choice = u.choices.filter((c) => !c.locked)[n - 1];
+            if (choice) session.chooseOption(choice.index);
+            e.preventDefault();
+            return;
+          }
+          if (!u.dialogActive && u.talk?.view === 'menu') {
+            const actions = [
+              () => session.chat(),
+              () => session.setTalkView('topics'),
+              () => session.flirt(),
+              () => session.setTalkView('gifts'),
+              () => session.exitTalk(),
+            ];
+            actions[n - 1]?.();
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+
+      const nav = keyToNav(e);
+      if (!nav) return;
+      // Held arrows may repeat to scroll long lists; confirm and cancel never repeat.
+      if (e.repeat && nav !== 'up' && nav !== 'down' && nav !== 'left' && nav !== 'right') return;
+      e.preventDefault();
+      dispatchNav(nav);
     };
+
+    window.addEventListener('mousedown', onMouseDown);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('keydown', onKey);
+    };
   }, []);
 
   return (
     <>
-      {ui.mode === 'boot' && <div className="screen center"><div className="loading">Loading…</div></div>}
+      {ui.mode === 'boot' && (
+        <div className="screen center">
+          <div className="loading">Loading…</div>
+        </div>
+      )}
       {ui.mode === 'title' && <TitleScreen />}
       {ui.mode === 'creation' && <CreationScreen />}
       {state && ui.mode !== 'title' && ui.mode !== 'creation' && <Hud snap={snap} />}

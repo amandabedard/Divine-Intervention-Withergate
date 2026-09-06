@@ -6,6 +6,12 @@ import { PHASES } from './ids.ts';
 // Map files are written by the editor (docs/tools/map-editor.md) and can be
 // hand-edited. Coordinates are in logical pixels at 1280x720.
 
+/**
+ * Characters stand this far below `ground_y` (inside the path band drawn under the
+ * ground line) rather than on the line itself. Shared by the game and the editor.
+ */
+export const WALK_LINE_OFFSET = 28;
+
 export const PlacementSchema = z.strictObject({
   /** Asset id from the manifest, or "placeholder". */
   asset: z.string().min(1),

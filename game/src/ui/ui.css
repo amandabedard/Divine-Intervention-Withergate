@@ -92,6 +92,12 @@ button.on {
 button.subtle {
   opacity: 0.8;
 }
+button.focused {
+  border-color: var(--gold);
+  background: rgba(217, 182, 106, 0.2);
+  box-shadow: inset 3px 0 0 var(--gold);
+  opacity: 1;
+}
 kbd {
   display: inline-block;
   min-width: 16px;
@@ -327,13 +333,12 @@ input[type='number'] {
 /* talk menu */
 .talk {
   position: absolute;
-  left: 50%;
+  left: 24px;
   bottom: 40px;
-  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 48px);
 }
 .talk-bust {
   height: min(300px, 42vh);
@@ -381,12 +386,12 @@ input[type='number'] {
 /* dialog */
 .dialog {
   position: absolute;
-  left: 50%;
+  left: 24px;
+  right: 24px;
   bottom: 28px;
-  transform: translateX(-50%);
-  width: min(1100px, 94vw);
   display: flex;
   align-items: flex-end;
+  justify-content: flex-start;
   gap: 0;
   cursor: pointer;
 }
@@ -412,6 +417,8 @@ input[type='number'] {
 }
 .dialog .box {
   flex: 1;
+  max-width: 980px;
+  text-align: left;
   min-height: 150px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -461,6 +468,9 @@ input[type='number'] {
 }
 .choices button {
   font-size: 16px;
+  text-align: left;
+  align-self: flex-start;
+  min-width: 60%;
 }
 .roll {
   margin-top: 10px;

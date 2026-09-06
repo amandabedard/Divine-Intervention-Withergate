@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { WALK_LINE_OFFSET } from '@withergate/shared';
 import type { GameMap, MapEntity, Placement } from '@withergate/shared';
 import { LAYERS, editor, useEditor } from './state';
 import type { EditorState, LayerName, Selection } from './state';
@@ -56,7 +57,8 @@ function entityBounds(e: MapEntity): Rect {
   switch (e.type) {
     case 'spawn':
     case 'npc_spot':
-      return { x: e.x - MANNEQUIN.w / 2, y: e.y - MANNEQUIN.h, w: MANNEQUIN.w, h: MANNEQUIN.h };
+      // feet stand a little below the ground line, exactly as in the game
+      return { x: e.x - MANNEQUIN.w / 2, y: e.y + WALK_LINE_OFFSET - MANNEQUIN.h, w: MANNEQUIN.w, h: MANNEQUIN.h };
     case 'facility_slot': {
       const s = SLOT_SIZE[e.size];
       return { x: e.x - s.w / 2, y: e.y - s.h, w: s.w, h: s.h };
@@ -319,11 +321,12 @@ function drawMap(ctx: CanvasRenderingContext2D, st: EditorState, size: { w: numb
           // facing arrow
           ctx.beginPath();
           const dir = e.facing === 'left' ? -1 : 1;
-          ctx.moveTo(e.x + dir * 8, e.y - 40);
-          ctx.lineTo(e.x + dir * 24, e.y - 40);
-          ctx.lineTo(e.x + dir * 16, e.y - 48);
-          ctx.moveTo(e.x + dir * 24, e.y - 40);
-          ctx.lineTo(e.x + dir * 16, e.y - 32);
+          const fy = e.y + WALK_LINE_OFFSET;
+          ctx.moveTo(e.x + dir * 8, fy - 40);
+          ctx.lineTo(e.x + dir * 24, fy - 40);
+          ctx.lineTo(e.x + dir * 16, fy - 48);
+          ctx.moveTo(e.x + dir * 24, fy - 40);
+          ctx.lineTo(e.x + dir * 16, fy - 32);
           ctx.stroke();
           label(`${e.type === 'spawn' ? '⚑' : '☺'} ${e.id}`, e.x, b.y - 34, color);
           break;
