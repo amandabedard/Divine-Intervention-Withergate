@@ -21,6 +21,15 @@ export const DOMAIN_LABELS: Record<Domain, string> = {
   discovery: 'Discovery',
 };
 
+/** Hidden tags granted when an axis passes the milestone threshold. Never shown to the player. */
+export const DOMAIN_MILESTONE_TAGS: Record<Domain, string> = {
+  friendship: 'beloved',
+  pleasure: 'hedonist',
+  prosperity: 'provider',
+  combat: 'warlord',
+  discovery: 'wayfarer',
+};
+
 /** An in-game week. */
 export const DAYS_PER_WEEK = 5;
 

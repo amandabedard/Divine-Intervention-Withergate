@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '../bridge/store';
 import { session } from '../core/session';
+import { BattleUi } from './battle';
 import { DebugPanel } from './debug';
 import { DialogBox, TalkMenu } from './dialog';
 import { Hud, Toasts } from './hud';
@@ -95,9 +96,10 @@ export function App() {
       )}
       {ui.mode === 'title' && <TitleScreen />}
       {ui.mode === 'creation' && <CreationScreen />}
-      {state && ui.mode !== 'title' && ui.mode !== 'creation' && <Hud snap={snap} />}
-      {ui.talk && !ui.dialogActive && <TalkMenu snap={snap} />}
-      {ui.dialogActive && <DialogBox snap={snap} />}
+      {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && <Hud snap={snap} />}
+      {ui.mode === 'dialog' && ui.talk && !ui.dialogActive && <TalkMenu snap={snap} />}
+      {ui.mode === 'dialog' && ui.dialogActive && <DialogBox snap={snap} />}
+      {ui.mode === 'battle' && state && <BattleUi snap={snap} />}
       {ui.mode === 'panel' && ui.panel && <Panel kind={ui.panel} snap={snap} />}
       <Toasts toasts={ui.toasts} />
       {ui.debugOpen && <DebugPanel snap={snap} />}

@@ -31,6 +31,7 @@ pronouns: she/her              # used only in system text ("She has left Witherg
 profession: logger             # doctor | warrior | farmer | academic | engineer | logger | miner | chef | explorer | craftsman | socialite
 home_town: dilsdurf            # aboridge | dilsdurf | heathel | mukrige | scottsburg | none (wanderer)
 romanceable: true
+protected: false               # true for story figures the corruption can never claim (the king)
 portrait_set: mara             # busts in assets/characters/mara_busts/mara_<mood>.png; every mood used in dialog must exist (neutral required)
 sprite_set: mara               # frames in assets/characters/mara_sprites/{idle,leftwalk,rightwalk}N.png
 
@@ -128,6 +129,7 @@ schedule:
 | `profession` | yes | one of the 11; exceptions allowed with `profession: none` |
 | `home_town` | yes | `none` for wanderers met on the road |
 | `romanceable` | yes | false → flirt always rejected with the standard line and no effect |
+| `protected` | no | default false; true means the corruption can never kill this character |
 | `portrait_set`, `sprite_set` | no | default to `id`; missing assets show the placeholder |
 | `bio` | yes | shown in Living Quarters and the journal |
 | `personality` | no | free text; not read by the game beyond reports |

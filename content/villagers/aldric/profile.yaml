@@ -44,6 +44,7 @@ benefits:
     - { type: caravan_safety, percent: 10 }
   combat:
     - { type: passive, effect: intercept_hit, value: 1 }
+    - { type: active, skill: shield_bash }
 
 # SAMPLE: Aboridge has no maps yet, so his "home" schedule keeps him around Withergate.
 schedule:

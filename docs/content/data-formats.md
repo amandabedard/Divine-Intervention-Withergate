@@ -90,7 +90,7 @@ appears: { biomes: [forest, corrupted], time: [evening, night], corruption_min: 
 tier: regular                         # regular | elite | boss
 ```
 
-Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts.
+A move with `power` attacks; a move with `effect` applies a status (buffs `attack_up` / `defense_up` / `inspired` go on the enemy itself, everything else on the player); a move can do both. In a move's `when`, `hp_below` means the enemy's own HP fraction. `spare` is optional: leave it out and the enemy can never be spared. Boss files add `phases:` (a list of `{ hp_below, moves, on_enter: [steps] }`) and `intro:` / `defeat:` scripts (bosses arrive with the story systems).
 
 ---
 
@@ -154,6 +154,26 @@ powers:
     tier: 1
     kind: travel
     effect: { type: preview_nodes, columns: 1 }
+  - id: mending_light
+    name: Mending Light
+    domain: friendship
+    tier: 1
+    kind: combat
+    cost: 5
+    target: self
+    heal: 10                           # restores heal + Divinity/2
+  - id: shield_bash
+    name: Shield Bash
+    kind: companion                    # a companion's once-per-battle skill; referenced from a villager's benefits.combat active entry
+    target: enemy
+    power: 0.8
+    damage_type: blunt
+    effect: { status: stagger, turns: 1 }
+```
+
+Combat powers may carry `power` (damage), `heal`, and `effect: { status, turns }` in any combination; `cost` is Grace. Companion skills cost nothing and use the player's Attack.
+
+```yaml
   - id: mara_cleave
     name: Cleave
     kind: companion                    # one use per battle, granted by a villager benefit

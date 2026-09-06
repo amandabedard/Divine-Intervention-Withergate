@@ -16,6 +16,10 @@ export class BootScene extends Phaser.Scene {
       if (this.scene.isActive('world')) return;
       this.scene.launch('world', data);
     });
+    bus.on('battle.start', (data) => {
+      if (this.scene.isActive('battle')) return;
+      this.scene.launch('battle', data);
+    });
 
     const fetchJson = <T>(url: string, fallback: T): Promise<T> =>
       fetch(url)

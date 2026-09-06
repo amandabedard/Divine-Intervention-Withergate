@@ -193,6 +193,8 @@ export class WorldScene extends Phaser.Scene {
       }),
       bus.on('npc.refresh', () => this.placeNpcs()),
       bus.on('stage', ({ step, done }) => this.performStage(step, done)),
+      bus.on('battle.start', () => this.scene.pause()),
+      bus.on('battle.end', () => this.scene.resume()),
     ];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.unsubscribe.forEach((u) => u());

@@ -92,6 +92,8 @@ export const ProfileSchema = z
     profession: z.enum(PROFESSIONS),
     home_town: z.enum(HOME_TOWNS),
     romanceable: z.boolean(),
+    /** Special characters (the king, story figures) the corruption can never claim. */
+    protected: z.boolean().default(false),
     portrait_set: ID.optional(),
     sprite_set: ID.optional(),
     bio: z.string(),

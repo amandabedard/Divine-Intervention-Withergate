@@ -1,4 +1,4 @@
-import { DOMAIN_LABELS, PHASES, levelForXp } from '@withergate/shared';
+import { DOMAIN_MILESTONE_TAGS, PHASES, levelForXp } from '@withergate/shared';
 import type { Domain, Effects, Phase } from '@withergate/shared';
 import { relationKey } from './conditions';
 import type { Ctx } from './ctx';
@@ -59,9 +59,11 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
       const key = d as Domain;
       const before = p.domainPoints[key];
       p.domainPoints[key] = Math.max(0, before + (n ?? 0));
+      // The title is a secret (decided F5): crossing a milestone grants a hidden tag, silently.
       const milestone = content.progression.domain_milestone;
       if (before < milestone && p.domainPoints[key] >= milestone) {
-        ctx.notify(`Your deeds speak of ${DOMAIN_LABELS[key]}.`);
+        const tag = DOMAIN_MILESTONE_TAGS[key];
+        if (!p.tags.includes(tag)) p.tags.push(tag);
       }
     }
   }

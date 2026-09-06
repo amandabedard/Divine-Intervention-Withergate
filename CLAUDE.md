@@ -14,7 +14,8 @@
 - `npm run editor` serves the map/asset editor at http://localhost:5174
 - `npm run validate -- --coverage` checks every content file (schema + cross references) and prints per-character coverage
 - `npm test` (vitest), `npm run typecheck` (tsc for shared, game, editor), `npm run build`
-- In the browser, `` ` `` toggles the debug panel; `window.__wg` exposes `store`, `session`, `game` in dev
+- In the browser, `` ` `` toggles the debug panel (time, relationships, tags, map jump, and a Battle section to pick an enemy, party, weapon and powers); `window.__wg` exposes `store`, `session`, `game` in dev
+- Combat rules live in `game/src/core/combat/battle.ts` (pure, tested); the session animates its events and `game/src/scenes/BattleScene.ts` + `game/src/ui/battle.tsx` render them
 
 ## Where things are
 - `docs/PLAN.md` master plan and milestones · `docs/design/gdd.md` design reference · `docs/content/*` authoring formats · `docs/tools/map-editor.md` editor spec · `docs/design/lore/` Amanda's notes

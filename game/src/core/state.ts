@@ -4,9 +4,11 @@ import {
   PHASES,
   RESOURCES,
   STATS,
+  TAGS_BLOCKING_EXPEDITIONS,
   faithLevelFor,
   mapEntities,
 } from '@withergate/shared';
+import type { BattleState } from './combat/battle';
 import type {
   ContentBundle,
   Domain,
@@ -89,6 +91,10 @@ export interface GameState {
   choicesMade: string[];
   world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[] };
   scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
+  /** Companions travelling with you (up to 2). Chosen properly in Phase 7; the debug panel sets it until then. */
+  party: string[];
+  /** The fight in progress, or null. Never persisted across a save. */
+  battle: BattleState | null;
   log: string[];
   rng: number;
 }
@@ -154,10 +160,42 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     choicesMade: [],
     world: { corruption: 1, relations: {}, unlockedMaps: [] },
     scheduleOverrides: {},
+    party: [],
+    battle: null,
     log: [],
     rng: seed >>> 0,
   };
   return state;
+}
+
+export interface CombatStats {
+  attack: number;
+  defense: number;
+  speed: number;
+  divinity: number;
+}
+
+/** Attack / Defense / Speed / Divinity from level and the current leaning's growth. */
+export function combatStats(state: GameState, content: ContentBundle): CombatStats {
+  const p = content.progression;
+  const lvl = state.player.level - 1;
+  const lean = domainLean(state);
+  const g = lean === 'none' ? {} : (p.lean_growth[lean] ?? {});
+  return {
+    attack: p.base.attack + (p.per_level.attack + (g.attack ?? 0)) * lvl,
+    defense: p.base.defense + (p.per_level.defense + (g.defense ?? 0)) * lvl,
+    speed: p.base.speed + (p.per_level.speed + (g.speed ?? 0)) * lvl,
+    divinity: p.base.divinity + (p.per_level.divinity + (g.divinity ?? 0)) * lvl,
+  };
+}
+
+/** Why an expedition cannot start right now, or null when it can. */
+export function expeditionBlocker(state: GameState): string | null {
+  const tags = activeTags(state);
+  const blocking = TAGS_BLOCKING_EXPEDITIONS.find((t) => tags.includes(t));
+  if (blocking) return `You are ${blocking}. Sleep it off first.`;
+  if (state.player.energy <= 0) return 'You are too exhausted to travel.';
+  return null;
 }
 
 export function villagerState(state: GameState, content: ContentBundle, id: string): VillagerState {

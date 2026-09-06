@@ -2,7 +2,7 @@
 
 Answer inline under each question (replace the `Answer:` line). Each question states the default that applies if you say nothing. I check this file at the start of every session and fold answers into the design docs.
 
-Groups A–E were answered on 2026-09-06 and are kept below as the decision log. Group F holds the follow-ups those answers raised.
+Groups A–F were answered on 2026-09-06 and 2026-09-07 and are kept below as the decision log. Group G holds the current follow-ups.
 
 ---
 
@@ -48,35 +48,26 @@ Groups A–E were answered on 2026-09-06 and are kept below as the decision log.
 | E6 | Start with the four named moods (neutral, happy, angry, sad). Every line has a reaction or defaults to neutral. |
 | E7 | No player bust; the player only picks options. |
 | E8 | Suspend save: yes. |
+| F1 | Skill tree: five small trees (one per axis), 1 skill point per faith level, no respec. Works for now. |
+| F2 | Recruit chance: after the last failed ask the character is closed as a recruit unless content reopens it with a flag. |
+| F3 | Escort home: costs the route's days (abstracted, no node map); the character can be recruited again from scratch. |
+| F4 | Corruption kills non-recruited characters that are not specially protected (`protected: true` on the character sheet). About a week before: "You can feel the corruption leaking into the mortal plane. Better do something about it before something terrible happens." When it happens, the messenger reports: "It appears we lost xyz in H town to the corruption last night…" |
+| F5 | The deity title is a **secret**. The player gets no hint of their leanings until the ending. |
+| F6 | `drunk`: −2 on Dexterity and Perception checks, +2 Charisma, cannot start an expedition. |
+| F7 | Gifts: **one per character per week** (5 days). Loved gifts +3 romance for romanceables, chat +1 friendship on the first chat of the day, first flirt per day counts. |
 
 ---
 
-## F. Follow-ups
+## G. Follow-ups
 
-**F1. Skill tree shape.** One tree per axis (five trees), or one shared tree where each node feeds an axis? How many skill points per faith level (default 1), and can points be respecced?
-Default: five small trees, 1 point per faith level, no respec.
-Answer:
-
-**F2. Recruit chance failures.** After the last failed ask ("can only ask 3 times"), is the character gone for good as a recruit, or does a quest or gift reopen it?
-Default: closed for good unless content reopens it with a flag.
-Answer:
-
-**F3. Escort home.** Does escorting a villager home cost travel days (a short expedition to their town) or happen instantly from Quarters? Can they be recruited again later?
-Default: costs the route's days (abstracted, no node map); recruitable again from scratch.
-Answer:
-
-**F4. Corruption kills.** Which characters are at risk (unnamed NPCs only, or named non-recruited villagers too)? Is there a warning window like the unhappiness one?
-Default: named non-recruited villagers are at risk; a rumour warns one day ahead; recruiting them protects them.
-Answer:
-
-**F5. Deity title text.** With five axes, how should the generated title read? Leading axis only ("Deity of Discovery"), or leading plus secondary ("Deity of Discovery and Friendship")? Do notable tags add an epithet?
-Default: leading axis; secondary appended when within 25% of the leader; one epithet from the strongest tag.
-Answer:
-
-**F6. Drunk tag.** Beyond dialog reactions, does `drunk` change anything mechanical (check penalties, better tavern outcomes, cannot leave town)?
-Default: −2 on Dexterity and Perception checks, +2 Charisma, cannot start an expedition.
-Answer:
-
-**F7. Quick facts I assumed in code.** Gifts: one per character per day; loved gifts also give +3 romance to romanceable characters. Chat: +1 friendship on the first chat of the day. Flirt: only the first flirt per day has an effect. Say so if any of these should change.
+**G1. Combat numbers.** Phase 4 ships with these proposals: crit chance 5% + 1% per Luck; dodge 2% per Dexterity (player only); Defend halves damage and restores 2 Grace; a power's damage scales from Divinity (`Divinity × 2 × power`) instead of Attack; Spare appears when an enemy is under 25% HP. Change any of them?
 Default: as stated.
+Answer:
+
+**G2. Loot outside expeditions.** Until expeditions exist, battle loot goes straight into Withergate's stores. Once the haul and caravan arrive (Phase 7), loot on the road goes into the haul instead. OK?
+Default: yes.
+Answer:
+
+**G3. Corruption timing.** How often does the corruption claim someone once the week-long warning has passed and nothing was done: one character per week, or escalating?
+Default: one per week, escalating to two after the second warning.
 Answer:

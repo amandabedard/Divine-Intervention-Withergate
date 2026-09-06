@@ -1,5 +1,6 @@
 // The session is the single entry point the UI and scenes use to act on the game.
 import {
+  DAYS_PER_WEEK,
   DEFAULT_GIFT_POINTS,
   NOT_INTERESTED_LINE,
   mapEntities,
@@ -16,7 +17,9 @@ import type {
 } from '@withergate/shared';
 import { bus } from '../bridge/bus';
 import { store } from '../bridge/store';
-import type { DialogChoice, DialogLine, PanelKind } from '../bridge/store';
+import type { BattleView, DialogChoice, DialogLine, PanelKind, UiMode } from '../bridge/store';
+import { applyDefeat, playerAct, startBattle } from './combat/battle';
+import type { BattleAction, BattleEvent, BattleResult, BattleSource } from './combat/battle';
 import { evaluate } from './conditions';
 import type { CoreRequest, Ctx } from './ctx';
 import { Interpreter } from './dialog/interpreter';
@@ -32,12 +35,43 @@ import { advancePhases, sleepUntilMorning } from './time';
 
 type DoneMode = 'menu' | 'close' | 'scene' | 'natural';
 
+/** How long each combat event stays on screen before the next one plays. */
+const EVENT_DELAY: Partial<Record<BattleEvent['type'], number>> = {
+  start: 700,
+  round: 350,
+  line: 1000,
+  enemy_move: 450,
+  power: 450,
+  hit: 600,
+  miss: 500,
+  heal: 500,
+  status: 500,
+  status_tick: 450,
+  status_end: 300,
+  skip: 550,
+  defend: 400,
+  grace: 250,
+  intercept: 650,
+  flee: 800,
+  spare: 800,
+  end: 900,
+};
+
 class Session {
   private interp: Interpreter | null = null;
   private onDone: ((mode: DoneMode) => void) | null = null;
   private queued: (() => void)[] = [];
   /** The ctx the running script shares, so effects and the requests they queue reach one place. */
   private dialogCtx: Ctx | null = null;
+  // battle bookkeeping
+  private battleCtx: Ctx | null = null;
+  private battleFromInterp = false;
+  private battleHandlesLoss = false;
+  private battleAfter: { onWin?: Step[]; onLose?: Step[] } | null = null;
+  private battleReturnMode: UiMode = 'world';
+  private battlePending: BattleEvent[] = [];
+  private battleDraining = false;
+  private battleTimer: number | null = null;
 
   // -- context ---------------------------------------------------------------
 
@@ -78,7 +112,7 @@ class Session {
         break;
       }
       case 'battle':
-        store.toast(`A ${store.content.enemies[r.enemy]?.name ?? r.enemy} attacks! (Combat arrives in Phase 4: you win.)`);
+        this.after(() => this.startBattle(r.enemy, { source: 'script', onWin: r.on_win, onLose: r.on_lose }));
         break;
       case 'time_changed':
         bus.emit('time.changed');
@@ -152,6 +186,16 @@ class Session {
       stats: { charisma: 5, intelligence: 5, luck: 5, dexterity: 5, perception: 5 },
       skipOpening: true,
     });
+    // Dev convenience: a couple of powers so combat can be tried without the skill tree.
+    const p = store.state?.player;
+    if (p) {
+      for (const id of ['smite', 'mending_light']) {
+        if (!store.content.powers[id]) continue;
+        if (!p.powers.includes(id)) p.powers.push(id);
+        if (!p.equippedPowers.includes(id) && p.equippedPowers.length < 4) p.equippedPowers.push(id);
+      }
+      store.commit();
+    }
   }
 
   load(slot: number): boolean {
@@ -166,8 +210,9 @@ class Session {
     this.onDone = null;
     this.dialogCtx = null;
     this.queued = [];
+    this.resetBattle();
     store.setState(state);
-    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false });
+    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false, battle: null });
     bus.emit('world.enter', { map: state.where.map, x: state.where.x, facing: state.where.facing });
   }
 
@@ -579,8 +624,15 @@ class Session {
     const ctx = this.ctx(id);
     const v = store.content.villagers[id]!;
     const rel = villagerState(ctx.state, ctx.content, id);
-    if (rel.giftedDay === ctx.state.time.day) {
-      this.runSteps([{ kind: 'line', speaker: 'narrate', text: `You already gave ${v.profile.name} something today.` }], `gift:${id}`, id, () => this.showMenu());
+    // One gift per character per week (decided F7).
+    if (rel.giftedDay > 0 && ctx.state.time.day - rel.giftedDay < DAYS_PER_WEEK) {
+      const wait = DAYS_PER_WEEK - (ctx.state.time.day - rel.giftedDay);
+      this.runSteps(
+        [{ kind: 'line', speaker: 'narrate', text: `You already gave ${v.profile.name} something this week. (${wait} day${wait === 1 ? '' : 's'} to go)` }],
+        `gift:${id}`,
+        id,
+        () => this.showMenu(),
+      );
       return;
     }
     // consume
@@ -610,6 +662,112 @@ class Session {
     this.flush(gctx);
     store.updateUi({ talk: { villager: id, view: 'menu' } });
     this.runSteps(steps, `gift:${id}:${itemId}`, id, (mode) => (mode === 'close' ? this.exitTalk() : this.showMenu()));
+  }
+
+  // -- battle ----------------------------------------------------------------
+
+  /**
+   * Start a fight. From a running script the script resumes with its on_win / on_lose branch
+   * afterwards; otherwise the optional onWin / onLose steps run as their own script.
+   */
+  startBattle(
+    enemyId: string,
+    opts: { source: BattleSource; fromInterp?: boolean; handlesLoss?: boolean; onWin?: Step[]; onLose?: Step[] },
+  ): boolean {
+    if (!store.state || store.state.battle) return false;
+    if (!store.content.enemies[enemyId]) {
+      store.toast(`Unknown enemy "${enemyId}".`);
+      return false;
+    }
+    this.battleFromInterp = !!opts.fromInterp;
+    this.battleHandlesLoss = !!opts.handlesLoss || !!opts.onLose;
+    this.battleAfter = { onWin: opts.onWin, onLose: opts.onLose };
+    this.battleReturnMode = store.ui.mode === 'dialog' ? 'dialog' : 'world';
+    const ctx = opts.fromInterp && this.dialogCtx ? this.dialogCtx : this.ctx();
+    this.battleCtx = ctx;
+    const events = startBattle(ctx, enemyId, opts.source);
+    store.updateUi({ mode: 'battle', battle: { log: [], busy: true, view: 'main' } });
+    bus.emit('battle.start', { enemy: enemyId });
+    this.queueBattleEvents(events);
+    return true;
+  }
+
+  /** The player's action for this turn; ignored while events are still animating. */
+  battleAct(action: BattleAction): void {
+    const b = store.state?.battle;
+    if (!b || !this.battleCtx || b.phase !== 'active' || !b.awaitingInput || store.ui.battle?.busy) return;
+    const events = playerAct(this.battleCtx, action);
+    if (!events.length) return;
+    store.updateUi({ battle: { ...store.ui.battle!, busy: true, view: 'main' } });
+    this.queueBattleEvents(events);
+  }
+
+  setBattleView(view: BattleView['view']): void {
+    if (!store.ui.battle) return;
+    store.updateUi({ battle: { ...store.ui.battle, view } });
+  }
+
+  private queueBattleEvents(events: BattleEvent[]): void {
+    this.battlePending.push(...events);
+    if (!this.battleDraining) this.drainBattle();
+  }
+
+  private drainBattle(): void {
+    const ev = this.battlePending.shift();
+    if (!ev) {
+      this.battleDraining = false;
+      this.afterBattleEvents();
+      return;
+    }
+    this.battleDraining = true;
+    if (store.ui.battle) store.updateUi({ battle: { ...store.ui.battle, log: [...store.ui.battle.log, ev].slice(-10) } });
+    else store.commit();
+    bus.emit('battle.event', ev);
+    this.battleTimer = window.setTimeout(() => this.drainBattle(), EVENT_DELAY[ev.type] ?? 450);
+  }
+
+  private afterBattleEvents(): void {
+    const b = store.state?.battle;
+    if (!b) return;
+    if (b.phase === 'active') {
+      if (store.ui.battle) store.updateUi({ battle: { ...store.ui.battle, busy: false } });
+      return;
+    }
+    this.finishBattle(b.phase);
+  }
+
+  private finishBattle(result: BattleResult): void {
+    const ctx = this.battleCtx ?? this.ctx();
+    const won = result === 'won' || result === 'spared';
+    const fromInterp = this.battleFromInterp && !!this.interp;
+    const after = this.battleAfter;
+    const handlesLoss = this.battleHandlesLoss;
+    const returnMode = this.battleReturnMode;
+    store.state!.battle = null;
+    this.resetBattle();
+    bus.emit('battle.end', { result });
+    store.updateUi({ mode: fromInterp ? 'dialog' : returnMode, battle: null });
+    if (!won && !handlesLoss) applyDefeat(ctx);
+    if (fromInterp) {
+      this.interp!.resolveBattle(won);
+      this.pump(ctx);
+      return;
+    }
+    this.flush(ctx);
+    const steps = won ? after?.onWin : after?.onLose;
+    if (steps?.length) this.runSteps(steps, `battle:${result}`, undefined, () => this.setWorld());
+    else if (store.ui.mode === 'dialog' && !this.interp) this.setWorld();
+  }
+
+  private resetBattle(): void {
+    if (this.battleTimer !== null) window.clearTimeout(this.battleTimer);
+    this.battleTimer = null;
+    this.battlePending = [];
+    this.battleDraining = false;
+    this.battleCtx = null;
+    this.battleFromInterp = false;
+    this.battleHandlesLoss = false;
+    this.battleAfter = null;
   }
 
   // -- dialog engine ---------------------------------------------------------
@@ -664,9 +822,11 @@ class Session {
         break;
       }
       case 'battle':
-        store.toast(`A ${store.content.enemies[o.step.enemy]?.name ?? o.step.enemy} attacks! (Combat arrives in Phase 4: you win.)`);
-        interp.resolveBattle(true);
-        this.pump(ctx);
+        // The script waits; finishBattle() resumes it with resolveBattle().
+        if (!this.startBattle(o.step.enemy, { source: 'script', fromInterp: true, handlesLoss: !!o.step.on_lose })) {
+          interp.resolveBattle(true);
+          this.pump(ctx);
+        }
         return;
       case 'done': {
         this.interp = null;
@@ -768,6 +928,25 @@ class Session {
       this.flush(ctx);
     },
     tierLabel: (id: string) => tierForPoints(villagerState(store.state!, store.content, id).friendship),
+    startBattle: (enemy: string) => this.startBattle(enemy, { source: 'debug' }),
+    setParty: (ids: string[]) => {
+      store.state!.party = ids.slice(0, 2);
+      store.commit();
+    },
+    setWeapon: (id: string) => {
+      store.state!.player.weaponId = id || null;
+      store.commit();
+    },
+    togglePower: (id: string) => {
+      const p = store.state!.player;
+      if (p.equippedPowers.includes(id)) {
+        p.equippedPowers = p.equippedPowers.filter((x) => x !== id);
+      } else {
+        if (!p.powers.includes(id)) p.powers.push(id);
+        if (p.equippedPowers.length < 4) p.equippedPowers.push(id);
+      }
+      store.commit();
+    },
   };
 }
 

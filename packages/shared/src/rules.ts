@@ -1,6 +1,6 @@
 // Pure rule helpers shared by the game and the tools. No engine imports.
 import { DEFAULT_TIER_THRESHOLDS, PHASES, TIERS } from './ids.ts';
-import type { Phase, Tier } from './ids.ts';
+import type { Phase, Stat, Tier } from './ids.ts';
 
 /** Tier for a friendship point total. */
 export function tierForPoints(points: number, thresholds = DEFAULT_TIER_THRESHOLDS): Tier {
@@ -23,6 +23,21 @@ export function nextPhase(phase: Phase): { phase: Phase; newDay: boolean } {
   const i = phaseIndex(phase);
   if (i === PHASES.length - 1) return { phase: PHASES[0], newDay: true };
   return { phase: PHASES[i + 1]!, newDay: false };
+}
+
+/** Check modifiers granted by tags (decided F6: being drunk). Keys are tag ids. */
+export const TAG_CHECK_MODIFIERS: Record<string, Partial<Record<Stat, number>>> = {
+  drunk: { dexterity: -2, perception: -2, charisma: 2 },
+};
+
+/** Tags that stop the player from leaving on an expedition. */
+export const TAGS_BLOCKING_EXPEDITIONS: readonly string[] = ['drunk'];
+
+/** Sum of tag-based modifiers for one stat. */
+export function tagCheckBonus(tags: readonly string[], stat: Stat): number {
+  let n = 0;
+  for (const t of tags) n += TAG_CHECK_MODIFIERS[t]?.[stat] ?? 0;
+  return n;
 }
 
 export type CheckOutcome = 'crit_success' | 'success' | 'fail' | 'crit_fail';
