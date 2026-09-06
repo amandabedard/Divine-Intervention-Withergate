@@ -89,3 +89,21 @@ The first set (seven 768px pixel-art packs: town, gothic, farm, dreamland, rome,
 **I1. Top-down art in a side-scroller.** The two top-down packs are drawn from above at 16px, next to 128px cartoon platformer art. Their props (plants, furniture, animals' houses) can pass as decoration at 2x–4x scale; their ground and water tiles will look odd on a side view. Keep them as an option, or drop them to keep the tile tab short?
 Default: keep.
 Answer:
+
+## J. Expeditions (2026-09-07, Phase 7 built with these defaults)
+
+**J1. The way home.** "Head home" is abstract: one day per two segments walked, no nodes, and the carried haul faces the end-of-trip risk once. Keep it abstract, or should the return be its own shorter node map (more risk, more gathering)?
+Default: abstract.
+Answer:
+
+**J2. Companions in other towns.** Companions who reach Aboridge with you still show up at their usual Withergate spots while you are away (schedules do not know about the road yet). Fine for now, or should they follow you onto town maps?
+Default: fine for now.
+Answer:
+
+**J3. Settlements and bosses.** `settlement` nodes (a small side-scroller map mid-road) and `boss` nodes are reserved: today a boss is just a checkpoint encounter that starts a battle (see `hollow_den`). Do you want settlements as map-loading nodes, and bosses with their own node type and reward rules?
+Default: content-driven checkpoints only.
+Answer:
+
+**J4. Corruption clearing.** The frontier's `hollow_den` lowers corruption by one and sets `hollow_den_cleared`; the countdown and messenger from G3/H1 arrive with Phase 8. Should clearing a den also protect a named villager (a "who was saved" line), or only reset the clock?
+Default: only the clock.
+Answer:

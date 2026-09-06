@@ -684,7 +684,7 @@ function SelectionEditor({ map, sel }: { map: GameMap; sel: NonNullable<Selectio
           <Sel
             label="action"
             value={a.kind}
-            options={['sign', 'open_ui', 'run_script', 'forage', 'facility']}
+            options={['sign', 'open_ui', 'run_script', 'forage', 'facility', 'expedition']}
             onChange={(v) =>
               setE<EntityOf<'interactable'>>((ent) => {
                 switch (v) {
@@ -692,6 +692,7 @@ function SelectionEditor({ map, sel }: { map: GameMap; sel: NonNullable<Selectio
                   case 'run_script': ent.action = { kind: 'run_script', script: st.content.shared[0] ?? 'shared/notice_board' }; break;
                   case 'forage': ent.action = { kind: 'forage', resource: 'herbs', amount: [1, 3], once_per_day: true }; break;
                   case 'facility': ent.action = { kind: 'facility', facility: st.content.facilities[0]?.id ?? 'barracks' }; break;
+                  case 'expedition': ent.action = { kind: 'expedition' }; break;
                   default: ent.action = { kind: 'sign', text: '[PLACEHOLDER: sign text]' };
                 }
               }, 'kind')

@@ -294,6 +294,8 @@ regions:
 
 Biome defaults live in `content/biomes.yaml` (node weights per type and per phase, enemy pools, gather tables). The generator multiplies: biome default × region override × phase modifier × corruption modifier × party and facility benefits × power effects.
 
+How a region is walked (built in Phase 7): a route has `days` segments, an exploration rolls its `segments`; every segment is three columns of 2–4 nodes and then one checkpoint drawn from `checkpoints[segment]` (`pool` picks at random among those whose `where` fits, `fixed` always plays). The last checkpoint of a route is the gates of `to`: after it plays, the town's map loads at its `from_road` spawn (or the visit is abstract and you turn back if the town has no map yet). A route that ends in a town also offers the way back from that town. Enemies for battle nodes come from the biome's `enemies`, filtered by each enemy's `appears`; elite nodes prefer `tier: elite` enemies and otherwise toughen a regular one.
+
 ---
 
 ## Encounter events
@@ -327,7 +329,7 @@ script:
           - narrate: "Green shoots curl through the mud where the tears fell."
 ```
 
-Party members can speak in encounters with `- party: mara` lines; the line is skipped if she is not present, or use `requires: { party_has: mara }` on a choice.
+Party members can speak in encounters with `- party: mara` lines; the line is skipped if she is not present, or use `requires: { party_has: mara }` on a choice. `node` decides where an encounter can appear: `event` nodes draw from the event pool, `shrine`, `traveler` and `rest` nodes draw from theirs (with a built-in fallback when nothing fits), and `checkpoint` encounters are only reached through a region's `checkpoints` pools. `once: true` plays a single time per game. While on the road, `resources` effects go into the haul and `in_expedition`, `biome` and `node` conditions describe where you are.
 
 ---
 

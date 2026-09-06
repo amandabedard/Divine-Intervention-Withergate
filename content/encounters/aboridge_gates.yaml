@@ -1,0 +1,10 @@
+# SAMPLE checkpoint: arriving at Aboridge. Plays before the town map loads.
+id: aboridge_gates
+name: "The Gates of Aboridge"
+node: checkpoint
+weight: 1
+script:
+  - narrate: "[PLACEHOLDER: Aboridge's walls come into view, and the gate guards look you over.]"
+  - if: { party_has: aldric }
+    then:
+      - aldric(happy): "[PLACEHOLDER: Aldric greets the guards by name.]"

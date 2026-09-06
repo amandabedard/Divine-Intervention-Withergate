@@ -20,8 +20,15 @@ export type PanelKind =
   | 'shrine'
   | 'facility'
   | 'craft'
-  | 'notice_board';
-export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle';
+  | 'notice_board'
+  | 'expedition_plan';
+export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition';
+
+export interface ExpeditionView {
+  view: 'map' | 'result' | 'checkpoint' | 'menu';
+  title?: string;
+  lines?: string[];
+}
 export type TalkView = 'menu' | 'topics' | 'gifts';
 
 export interface BattleView {
@@ -74,6 +81,7 @@ export interface UiState {
   roll: DialogRoll | null;
   dialogActive: boolean;
   battle: BattleView | null;
+  expedition: ExpeditionView | null;
   toasts: Toast[];
   debugOpen: boolean;
 }
@@ -98,6 +106,7 @@ function initialUi(): UiState {
     roll: null,
     dialogActive: false,
     battle: null,
+    expedition: null,
     toasts: [],
     debugOpen: false,
   };

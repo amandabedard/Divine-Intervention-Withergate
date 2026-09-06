@@ -1,0 +1,20 @@
+# SAMPLE checkpoint: the camp halfway along the East Road.
+id: wayfarer_camp
+name: "The Wayfarers' Camp"
+node: checkpoint
+weight: 1
+script:
+  - narrate: "[PLACEHOLDER: A ring of stones and a lean-to where travellers stop between Withergate and Aboridge. Tonight it is empty.]"
+  - choice:
+      - text: "Rest by the old fire before going on."
+        effects: { energy: +1 }
+        then:
+          - narrate: "The stones still hold a little warmth."
+      - text: "Look through what the last travellers left."
+        check: { stat: perception, dc: 10 }
+        success:
+          - narrate: "A cloth bundle wedged under a stone: someone's forgotten supper."
+          - effects: { resources: { food: 2 } }
+        fail:
+          - narrate: "Ashes and a broken cup. Nothing worth carrying."
+      - text: "Move on."

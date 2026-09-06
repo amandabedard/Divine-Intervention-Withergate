@@ -11,6 +11,7 @@ export function DebugPanel({ snap }: { snap: Snapshot }) {
   const [map, setMap] = useState(s?.where.map ?? Object.keys(snap.content.maps)[0] ?? '');
   const [spawn, setSpawn] = useState('');
   const [enemy, setEnemy] = useState(Object.keys(snap.content.enemies)[0] ?? '');
+  const [region, setRegion] = useState(Object.keys(snap.content.regions)[0] ?? '');
   const issues = snap.content.issues;
   const spawns = snap.content.maps[map] ? mapEntities(snap.content.maps[map]!, 'spawn') : [];
 
@@ -45,6 +46,26 @@ export function DebugPanel({ snap }: { snap: Snapshot }) {
               </span>
               <button onClick={() => session.debug.nextPhase()}>+ phase</button>
               <button onClick={() => session.debug.nextDay()}>next morning</button>
+            </div>
+          </section>
+
+          <section>
+            <h4>Expedition</h4>
+            <div className="row">
+              <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                {Object.values(snap.content.regions).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({r.kind}, from {r.from})
+                  </option>
+                ))}
+              </select>
+              <button onClick={() => session.debug.startExpedition(region, s.party)} disabled={!!s.expedition}>
+                set out
+              </button>
+            </div>
+            <div className="muted">
+              {s.expedition ? `on ${s.expedition.region}, column ${s.expedition.col + 1}/${s.expedition.columns.length}` : 'at home'} · party: {s.party.join(', ') || 'none'} · caravans in transit:{' '}
+              {s.caravans.length}
             </div>
           </section>
 

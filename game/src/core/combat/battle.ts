@@ -6,6 +6,7 @@ import type { Enemy, Power, Status, Step, Weapon } from '@withergate/shared';
 import { evaluate } from '../conditions';
 import type { Ctx } from '../ctx';
 import { grantXp } from '../effects';
+import { addItems, addResources } from '../expedition';
 import { activeTags, combatStats, maxEnergy, maxGrace, maxHp, villagerState } from '../state';
 import { sleepUntilMorning } from '../time';
 
@@ -76,7 +77,13 @@ export interface BattleState {
   party: string[];
   source: BattleSource;
   lowHpWarned: boolean;
+  /** An elite: tougher, harder-hitting, twice the reward. */
+  elite: boolean;
 }
+
+const ELITE_HP = 1.6;
+const ELITE_ATTACK = 1.3;
+const ELITE_REWARD = 2;
 
 export const STATUS_LABELS: Record<Status, string> = {
   bleed: 'Bleeding',
@@ -164,7 +171,7 @@ export function playerCombat(ctx: Ctx) {
 
 function enemyCombat(ctx: Ctx, enemy: Enemy) {
   const b = ctx.state.battle!;
-  let attack = enemy.stats.attack;
+  let attack = enemy.stats.attack * (b.elite ? ELITE_ATTACK : 1);
   let defense = enemy.stats.defense;
   let speed = enemy.stats.speed;
   if (has(b.enemyStatuses, 'attack_up')) attack *= 1.25;
@@ -180,17 +187,19 @@ function enemyCombat(ctx: Ctx, enemy: Enemy) {
 // --- lifecycle ----------------------------------------------------------------
 
 /** Begin a fight. Returns the events up to the first player decision. */
-export function startBattle(ctx: Ctx, enemyId: string, source: BattleSource): BattleEvent[] {
+export function startBattle(ctx: Ctx, enemyId: string, source: BattleSource, opts: { elite?: boolean } = {}): BattleEvent[] {
   const enemy = ctx.content.enemies[enemyId];
   if (!enemy) throw new Error(`unknown enemy ${enemyId}`);
+  const elite = !!opts.elite;
+  const hp = Math.round(enemy.stats.hp * (elite ? ELITE_HP : 1));
   const party = ctx.state.party.filter((id) => {
     const v = ctx.state.villagers[id];
     return !!ctx.content.villagers[id] && !v?.gone;
   });
   ctx.state.battle = {
     enemyId,
-    enemyHp: enemy.stats.hp,
-    enemyMaxHp: enemy.stats.hp,
+    enemyHp: hp,
+    enemyMaxHp: hp,
     round: 0,
     queue: [],
     awaitingInput: false,
@@ -204,6 +213,7 @@ export function startBattle(ctx: Ctx, enemyId: string, source: BattleSource): Ba
     party,
     source,
     lowHpWarned: false,
+    elite,
   };
   const b = ctx.state.battle;
   b.interceptsLeft = b.passives.intercepts;
@@ -519,18 +529,19 @@ function finishWin(ctx: Ctx, events: BattleEvent[]): void {
   const enemy = battleEnemy(ctx);
   b.phase = 'won';
   const s = ctx.state;
-  if (enemy.xp) grantXp(ctx, enemy.xp);
+  const mult = b.elite ? ELITE_REWARD : 1;
+  const xp = enemy.xp * mult;
+  if (xp) grantXp(ctx, xp);
   const loot: Record<string, number> = {};
   for (const [r, n] of Object.entries(enemy.loot)) {
     if (!n) continue;
-    const key = r as keyof typeof s.town.resources;
-    // Until expeditions exist, loot goes straight to Withergate's stores (question G2).
-    s.town.resources[key] = (s.town.resources[key] ?? 0) + n;
-    loot[r] = n;
+    loot[r] = n * mult;
   }
+  // Loot joins the haul on the road, or Withergate's stores at home (decided G2).
+  addResources(ctx, loot);
   const drops: string[] = [];
   if (enemy.gift_drop && ctx.rng.chance(enemy.gift_drop.chance)) {
-    s.town.storage[enemy.gift_drop.item] = (s.town.storage[enemy.gift_drop.item] ?? 0) + 1;
+    addItems(ctx, { [enemy.gift_drop.item]: 1 });
     drops.push(enemy.gift_drop.item);
   }
   for (const t of enemy.tags_on_kill) if (!s.player.tags.includes(t)) s.player.tags.push(t);
@@ -539,7 +550,7 @@ function finishWin(ctx: Ctx, events: BattleEvent[]): void {
     const line = bark(ctx, id, 'victory');
     if (line) events.push(line);
   }
-  events.push({ type: 'end', result: 'won', xp: enemy.xp, loot, drops });
+  events.push({ type: 'end', result: 'won', xp, loot, drops });
 }
 
 // --- helpers --------------------------------------------------------------------

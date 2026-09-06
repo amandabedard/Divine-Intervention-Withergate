@@ -62,6 +62,9 @@ function migrate(state: GameState): GameState {
   state.notices ??= [];
   state.player.weapons ??= state.player.weaponId ? [state.player.weaponId] : [];
   state.town.slots ??= {};
+  state.expedition ??= null;
+  state.caravans ??= [];
+  state.world.encountersSeen ??= [];
   for (const b of state.town.buildQueue) b.slot ??= '';
   state.version = SAVE_VERSION;
   return state;

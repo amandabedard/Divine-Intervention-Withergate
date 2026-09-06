@@ -180,19 +180,19 @@ Emerges from facility and recruit choices: Farm + Restaurant + Bazaar makes a tr
 ## 10. Expeditions
 
 ### 10.1 Starting one
-Leave Withergate by a road exit → choose a destination town or a region to explore → choose up to 2 companions → confirm the expected days. Travel is a random assortment of days and encounters until the Town Hall establishes a route to a town, which cuts the time (decided).
+Plan from the desk in your Quarters (decided H1) or at a road's end or a town gate (an `expedition` interactable): choose a destination town or a region to explore → choose up to 2 companions → confirm the days. The planner shows why a resident cannot come (recovering, exhausted, unhappy, dislikes you). Routes have a fixed length in days; the Town Hall's established routes are a day shorter (decided). Built in Phase 7.
 
 ### 10.2 The node map
-Slay-the-Spire style: columns of 2–4 nodes with edges; you pick a path left to right. Each node costs one phase. Each segment ends in a **checkpoint**: a significant event such as a settlement, a boss, a story beat, or a discovery. Town routes have a fixed length and end at the town; region explorations have 1–3 segments (proposed).
+Slay-the-Spire style: columns of 2–4 nodes with edges; you pick a path left to right. Each node costs one phase. A **segment** is three nodes and a **checkpoint**, so a segment is a day; town routes have one segment per day and end at the town, explorations 1–3 segments (decided). Only the next column's node types are known; the Library, an Academic and the Wayfinding power each reveal one more. At a checkpoint you take stock: press on, send the haul home by caravan, or head home. The same map holds the way back: a route ending in a town lists the reverse journey from that town's gate.
 
 ### 10.3 Node types
-Battle · Elite battle · Event (text, checks, choices) · Gather (wood, ore, herbs, food, flavoured by biome) · Rest (camp; restore HP and energy; advances to morning) · Shrine (domain choices, minor blessings) · Cache (resources, sometimes a gift item) · Traveler (merchant or NPC) · Settlement (small side-scroller map) · Checkpoint / Boss.
+Battle · Elite battle (tougher enemy, double reward) · Event (an encounter from `content/encounters`, filtered by biome, hour and corruption) · Gather (wood, ore, herbs, food by the biome's table) · Rest (camp: sleep to morning, full HP, +2 energy for everyone) · Shrine (a shrine encounter, or a plain one with quiet choices that feed the domains) · Cache (resources, one time in four a gift item) · Traveler (a traveler encounter, or a peddler who buys from the haul) · Checkpoint (the region's pool for that segment, or a story checkpoint a quest asks for) · Settlement and Boss are reserved for content.
 
 ### 10.4 What shapes the map
-Biome; time phase (night favours monsters); corruption level (corrupted variants); party (Explorer adds paths, Logger adds wood nodes, Academic previews nodes); Withergate facilities (Library previews, Barracks fewer ambushes); day count; and quest requirements (a story checkpoint can be forced into a segment).
+Biome weights × region overrides × the phase the column falls in × corruption (more battles and elites on corrupted ground or past corruption 5) × danger (more elites) × the party's `node_weight` travel benefits. `extra_paths` adds edges, `preview_nodes` reveals columns, `gather_yield` scales gathering, `energy_cost` changes the per-node cost, `heal_per_node` heals on the road, `ambush_chance` shifts caravan risk. A quest stage with `checkpoint: X` forces `X` into the segment the region's `story_checkpoints` names.
 
 ### 10.5 Ending an expedition
-Reach the destination, finish the last checkpoint, or choose "Head home" from a rest or checkpoint (costs return days at a reduced node count, proposed). Gathered resources travel home by caravan (§12). HP and energy reset at home.
+Reach the destination town (the haul is carted home from there), finish the last checkpoint of an exploration, or choose "Head home" from a camp or checkpoint. Running out of energy also turns you home. The way home is abstract and quicker: one day per two segments walked, then you arrive at Withergate's east gate with everything gathered at the end-of-trip caravan risk (decided). HP and energy reset at home; companions who ran out of energy walked home earlier and simply rest. Dying on the road loses the haul (§11).
 
 ## 11. Combat
 
@@ -212,7 +212,7 @@ Implemented in Phase 4 (`game/src/core/combat/battle.ts`); numbers are proposals
 
 ## 12. Caravan and resources
 
-You choose when the haul goes home (decided): send it back from a checkpoint (50% chance of losing some) or carry it with you to the end (30%, since you are travelling with it). A loss takes 25–50% of each resource (proposed). Modifiers (proposed): Warrior resident or Barracks (−10 to −15%), Explorer (−5%), Luck (−1% per point), corruption (+5% per level near the frontier), combat powers. The result is reported when the caravan arrives.
+You choose when the haul goes home (decided): send it back from a checkpoint (50% chance of losing some) or carry it with you to the end (30%, since you are travelling with it). A loss takes 25–50% of each resource. Modifiers (built): `caravan_safety` from the Barracks and residents, the party's `ambush_chance`, Luck (−1% per point), corruption (+5% per level for regions that touch corrupted ground); the risk is clamped to 5–90%. A caravan sent from a checkpoint arrives after as many days as segments walked; one hired at a destination town takes the route's days. The morning notices report what arrived and what the bandits took. Loot from battles on the road joins the haul too (decided G2).
 
 ## 13. Quests and story
 

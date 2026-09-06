@@ -1,0 +1,23 @@
+# SAMPLE shrine node. Without a shrine encounter that fits, the game offers a plain one.
+id: roadside_shrine
+name: "A Roadside Shrine"
+node: shrine
+weight: 1
+where: { biomes: [plains, forest] }
+script:
+  - narrate: "[PLACEHOLDER: A shrine to a god nobody here remembers. The offerings are fresh anyway.]"
+  - choice:
+      - text: "Leave something from the haul."
+        requires: { in_expedition: true }
+        effects: { resources: { food: -1 }, faith: +1 }
+        then:
+          - narrate: "[PLACEHOLDER: The wind takes the offering. You feel watched, and not unkindly.]"
+      - text: "Sit with it a while."
+        effects: { hp: +8, domain_points: { friendship: 1 } }
+      - text: "Study the carvings."
+        check: { stat: intelligence, dc: 11 }
+        success:
+          - narrate: "[PLACEHOLDER: The carvings tell of a road older than the towns.]"
+          - effects: { domain_points: { discovery: 2 } }
+        fail:
+          - narrate: "Weather has taken most of it."

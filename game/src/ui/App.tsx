@@ -4,6 +4,7 @@ import { session } from '../core/session';
 import { BattleUi } from './battle';
 import { DebugPanel } from './debug';
 import { DialogBox, TalkMenu } from './dialog';
+import { ExpeditionUi } from './expedition';
 import { Hud, Toasts } from './hud';
 import { dispatchNav, keyToNav, startGamepadPolling } from './nav';
 import { Panel } from './panels';
@@ -96,7 +97,8 @@ export function App() {
       )}
       {ui.mode === 'title' && <TitleScreen />}
       {ui.mode === 'creation' && <CreationScreen />}
-      {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && <Hud snap={snap} />}
+      {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && ui.mode !== 'expedition' && <Hud snap={snap} />}
+      {state?.expedition && (ui.mode === 'expedition' || ui.mode === 'dialog') && <ExpeditionUi snap={snap} dimmed={ui.mode !== 'expedition'} />}
       {ui.mode === 'dialog' && ui.talk && !ui.dialogActive && <TalkMenu snap={snap} />}
       {ui.mode === 'dialog' && ui.dialogActive && <DialogBox snap={snap} />}
       {ui.mode === 'battle' && state && <BattleUi snap={snap} />}

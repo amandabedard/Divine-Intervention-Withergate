@@ -9,6 +9,7 @@ import {
   mapEntities,
 } from '@withergate/shared';
 import type { BattleState } from './combat/battle';
+import type { Caravan, ExpeditionState } from './expedition';
 import type {
   ContentBundle,
   Domain,
@@ -106,7 +107,11 @@ export interface GameState {
   quests: Record<string, QuestState>;
   flags: Record<string, FlagValue>;
   choicesMade: string[];
-  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[] };
+  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[]; encountersSeen: string[] };
+  /** The node map being walked, or null at home / in a town. */
+  expedition: ExpeditionState | null;
+  /** Hauls on their way to Withergate. */
+  caravans: Caravan[];
   scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
   /** Companions travelling with you (up to 2). Chosen properly in Phase 7; the debug panel sets it until then. */
   party: string[];
@@ -183,7 +188,9 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     quests: {},
     flags: {},
     choicesMade: [],
-    world: { corruption: 1, relations: {}, unlockedMaps: [] },
+    world: { corruption: 1, relations: {}, unlockedMaps: [], encountersSeen: [] },
+    expedition: null,
+    caravans: [],
     scheduleOverrides: {},
     party: [],
     battle: null,

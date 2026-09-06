@@ -1,0 +1,19 @@
+# SAMPLE checkpoint on the Frontier: a corrupted den to clear.
+id: hollow_den
+name: "The Hollow Den"
+node: checkpoint
+weight: 1
+script:
+  - narrate: "[PLACEHOLDER: A cleft in the hills where the corruption pools like fog. Something moves inside.]"
+  - choice:
+      - text: "Go in."
+        then:
+          - battle:
+              enemy: corrupted_shambler
+              on_win:
+                - narrate: "[PLACEHOLDER: The fog thins. For now, this ground is yours.]"
+                - effects: { corruption: -1, faith: +2, resources: { ore: 3 }, flags: { hollow_den_cleared: true }, domain_points: { combat: 1 } }
+              on_lose:
+                - narrate: "[PLACEHOLDER: The den keeps its secrets a while longer.]"
+      - text: "Mark the place and come back stronger."
+        effects: { flags: { hollow_den_seen: true }, domain_points: { discovery: 1 } }

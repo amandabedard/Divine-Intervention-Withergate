@@ -75,7 +75,7 @@ export function evaluate(cond: Condition | undefined, ctx: Ctx): boolean {
     const key = relationKey(cond.relations.between[0], cond.relations.between[1]);
     if ((state.world.relations[key] ?? 'neutral') !== cond.relations.is) return false;
   }
-  if (cond.in_expedition !== undefined && cond.in_expedition !== false) return false; // expeditions arrive in Phase 7
+  if (cond.in_expedition !== undefined && !!state.expedition !== cond.in_expedition) return false;
   if (cond.chance !== undefined && !ctx.rng.chance(cond.chance)) return false;
 
   if (cond.facility !== undefined && !state.town.facilities.includes(cond.facility)) return false;
@@ -88,9 +88,9 @@ export function evaluate(cond: Condition | undefined, ctx: Ctx): boolean {
       if ((state.town.resources[r as keyof typeof state.town.resources] ?? 0) < (min ?? 0)) return false;
     }
   }
-  if (cond.party_has !== undefined) return false; // no party until Phase 7
-  if (cond.party_has_profession !== undefined) return false;
-  if (cond.party_size_max !== undefined && cond.party_size_max < 0) return false;
+  if (cond.party_has !== undefined && !state.party.includes(cond.party_has)) return false;
+  if (cond.party_has_profession !== undefined && !state.party.some((id) => content.villagers[id]?.profile.profession === cond.party_has_profession)) return false;
+  if (cond.party_size_max !== undefined && state.party.length > cond.party_size_max) return false;
   if (cond.recruit_conditions_met !== undefined) {
     const profile = content.villagers[cond.recruit_conditions_met]?.profile;
     if (!profile?.recruit) return false;

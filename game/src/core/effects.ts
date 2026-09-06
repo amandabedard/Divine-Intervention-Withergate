@@ -2,6 +2,7 @@ import { DOMAIN_MILESTONE_TAGS, PHASES, levelForXp } from '@withergate/shared';
 import type { Domain, Effects, Phase } from '@withergate/shared';
 import { relationKey } from './conditions';
 import type { Ctx } from './ctx';
+import { addResources } from './expedition';
 import { advanceQuest, completeQuest, failQuest, startQuest } from './quests';
 import { changeFriendship, changeRomance, introduce, setRomanceState } from './relationships';
 import { faithLevel, maxEnergy, maxGrace, maxHp, phaseAbs, residents, villagerState } from './state';
@@ -99,12 +100,7 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   if (e.quest_complete) completeQuest(ctx, e.quest_complete);
   if (e.quest_fail) failQuest(ctx, e.quest_fail);
 
-  if (e.resources) {
-    for (const [r, n] of Object.entries(e.resources)) {
-      const key = r as keyof typeof state.town.resources;
-      state.town.resources[key] = Math.max(0, (state.town.resources[key] ?? 0) + (n ?? 0));
-    }
-  }
+  if (e.resources) addResources(ctx, e.resources);
   if (e.items) {
     for (const [id, n] of Object.entries(e.items)) {
       const next = (state.town.storage[id] ?? 0) + n;

@@ -11,6 +11,7 @@ import { SLOTS } from '../core/save';
 import { session } from '../core/session';
 import { faithLevel, maxEnergy, maxHp, residents, villagerState } from '../core/state';
 import * as town from '../core/town';
+import { ExpeditionPlanPanel } from './expedition';
 import { useMenuNav } from './nav';
 
 interface Item {
@@ -87,6 +88,7 @@ export function Panel({ kind, arg, snap }: { kind: PanelKind; arg: string | null
     case 'facility': body = <FacilityPanel snap={snap} facility={arg ?? ''} />; break;
     case 'craft': body = <CraftPanel snap={snap} facility={arg} />; break;
     case 'shrine': body = <ShrinePanel snap={snap} />; break;
+    case 'expedition_plan': body = <ExpeditionPlanPanel snap={snap} />; break;
     default: body = <Placeholder kind={kind} snap={snap} />;
   }
   return (
@@ -108,6 +110,7 @@ function QuartersPanel() {
       { label: 'Gift satchel', note: `${town.SATCHEL_SIZE} gifts for the road`, run: () => session.openPanel('satchel') },
       { label: 'Storage', note: 'what Withergate holds', run: () => session.openPanel('storage') },
       { label: 'Residents', note: 'escort someone home', run: () => session.openPanel('residents') },
+      { label: 'Expedition', note: 'plan a journey from your desk', run: () => session.openPanel('expedition_plan') },
       { label: 'Build', note: 'raise a facility', run: () => session.openPanel('build') },
       { label: 'Close', run: () => session.closePanel() },
     ],

@@ -17,15 +17,17 @@ import type {
 } from '@withergate/shared';
 import { bus } from '../bridge/bus';
 import { store } from '../bridge/store';
-import type { BattleView, DialogChoice, DialogLine, PanelKind, UiMode } from '../bridge/store';
+import type { BattleView, DialogChoice, DialogLine, ExpeditionView, PanelKind, UiMode } from '../bridge/store';
 import { applyDefeat, playerAct, startBattle } from './combat/battle';
 import type { BattleAction, BattleEvent, BattleResult, BattleSource } from './combat/battle';
 import { evaluate } from './conditions';
-import type { CoreRequest, Ctx } from './ctx';
+import type { CondExtras, CoreRequest, Ctx } from './ctx';
 import { Interpreter } from './dialog/interpreter';
 import type { InterpreterOutput } from './dialog/interpreter';
 import { pickLine } from './dialog/pools';
 import { applyEffects, recruit } from './effects';
+import { arrive, canStart, completeNode, endExpeditionByDeath, headHome, sendHaulHome, startExpedition, travelTo } from './expedition';
+import type { NodeOutcome } from './expedition';
 import { checkQuests } from './quests';
 import { changeFriendship, introduce } from './relationships';
 import { listSlots, loadSlot, saveToSlot } from './save';
@@ -84,7 +86,7 @@ class Session {
   private battleCtx: Ctx | null = null;
   private battleFromInterp = false;
   private battleHandlesLoss = false;
-  private battleAfter: { onWin?: Step[]; onLose?: Step[] } | null = null;
+  private battleAfter: { onWin?: Step[]; onLose?: Step[]; onFinish?: (won: boolean) => void } | null = null;
   private battleReturnMode: UiMode = 'world';
   private battlePending: BattleEvent[] = [];
   private battleDraining = false;
@@ -232,7 +234,7 @@ class Session {
     this.queued = [];
     this.resetBattle();
     store.setState(state);
-    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false, battle: null });
+    store.updateUi({ mode: 'world', panel: null, talk: null, line: null, choices: null, roll: null, dialogActive: false, battle: null, expedition: null });
     bus.emit('world.enter', { map: state.where.map, x: state.where.x, facing: state.where.facing });
   }
 
@@ -378,6 +380,125 @@ class Session {
     return true;
   }
 
+  // -- expeditions -------------------------------------------------------------
+
+  expedition = {
+    /** Set out from the planner. */
+    start: (regionId: string, party: string[]): boolean => {
+      const ctx = this.ctx();
+      const err = canStart(ctx, regionId, party);
+      if (err) {
+        store.toast(err);
+        return false;
+      }
+      startExpedition(ctx, regionId, party);
+      this.flush(ctx);
+      this.showExpedition({ view: 'map' });
+      return true;
+    },
+    /** Step to a node of the next column. */
+    travel: (row: number): void => {
+      const ctx = this.ctx();
+      const exp = ctx.state.expedition;
+      if (!exp || store.ui.mode !== 'expedition') return;
+      let outcome: NodeOutcome;
+      try {
+        outcome = travelTo(ctx, row);
+      } catch (e) {
+        store.toast((e as Error).message);
+        return;
+      }
+      this.flush(ctx);
+      this.playOutcome(outcome);
+    },
+    /** From the result box: the node is done. */
+    next: (): void => this.afterNode(),
+    sendHaul: (): void => {
+      const ctx = this.ctx();
+      const c = sendHaulHome(ctx);
+      this.flush(ctx);
+      if (!c) store.toast('Nothing to send.');
+      else store.toast(`The caravan sets off. It should reach Withergate in ${c.arrivesDay - ctx.state.time.day} day${c.arrivesDay - ctx.state.time.day === 1 ? '' : 's'}.`);
+      this.showExpedition({ view: 'checkpoint' });
+    },
+    headHome: (): void => this.expeditionHome(),
+    /** Leave the checkpoint menu: on to the next segment, or into the town at the end. */
+    proceed: (): void => {
+      const exp = store.state?.expedition;
+      if (!exp) return;
+      const node = exp.columns[exp.col]?.[exp.row];
+      if (node?.final) this.expeditionArrive();
+      else this.showExpedition({ view: 'map' });
+    },
+    setView: (view: ExpeditionView['view']): void => this.showExpedition({ view }),
+  };
+
+  private showExpedition(view: ExpeditionView): void {
+    store.updateUi({ mode: 'expedition', panel: null, panelArg: null, expedition: view });
+  }
+
+  private playOutcome(out: NodeOutcome): void {
+    switch (out.kind) {
+      case 'script':
+        this.runScript(out.script, out.id, undefined, () => this.afterNode(), { biome: out.biome, node: out.node });
+        break;
+      case 'battle':
+        if (!this.startBattle(out.enemy, { source: 'expedition', elite: out.elite, onFinish: (won) => (won ? this.afterNode() : this.expeditionDeath()) })) this.afterNode();
+        break;
+      case 'text':
+        this.showExpedition({ view: 'result', title: out.title, lines: out.lines });
+        break;
+      default:
+        this.afterNode();
+        break;
+    }
+  }
+
+  /** The node's outcome has been played: pay for it and see where that leaves the party. */
+  private afterNode(): void {
+    const ctx = this.ctx();
+    if (!ctx.state.expedition) {
+      this.setWorld();
+      return;
+    }
+    const done = completeNode(ctx);
+    this.flush(ctx);
+    for (const id of done.withdrawn) store.toast(`${store.content.villagers[id]?.profile.name ?? id} is spent and turns back for home.`);
+    if (done.exhausted) {
+      store.toast('You are spent. There is nothing for it but to turn for home.');
+      this.expeditionHome();
+    } else if (done.checkpoint) this.showExpedition({ view: 'checkpoint' });
+    else this.showExpedition({ view: 'map' });
+  }
+
+  private expeditionHome(): void {
+    const ctx = this.ctx();
+    if (!ctx.state.expedition) return;
+    const r = headHome(ctx);
+    store.updateUi({ mode: 'world', expedition: null });
+    this.flush(ctx);
+    ctx.state.notices.unshift(...r.report);
+    this.showNotices();
+  }
+
+  private expeditionArrive(): void {
+    const ctx = this.ctx();
+    if (!ctx.state.expedition) return;
+    const r = arrive(ctx);
+    store.updateUi({ mode: 'world', expedition: null });
+    this.flush(ctx);
+    ctx.state.notices.unshift(...r.report);
+    this.showNotices();
+  }
+
+  private expeditionDeath(): void {
+    const ctx = this.ctx();
+    endExpeditionByDeath(ctx);
+    applyDefeat(ctx);
+    store.updateUi({ mode: 'world', expedition: null });
+    this.flush(ctx);
+  }
+
   toggleDebug(): void {
     store.updateUi({ debugOpen: !store.ui.debugOpen });
   }
@@ -428,6 +549,9 @@ class Session {
       }
       case 'facility':
         this.slotInteract(a.facility);
+        break;
+      case 'expedition':
+        this.openPanel('expedition_plan');
         break;
       default:
         break;
@@ -813,7 +937,17 @@ class Session {
    */
   startBattle(
     enemyId: string,
-    opts: { source: BattleSource; fromInterp?: boolean; handlesLoss?: boolean; onWin?: Step[]; onLose?: Step[] },
+    opts: {
+      source: BattleSource;
+      fromInterp?: boolean;
+      handlesLoss?: boolean;
+      onWin?: Step[];
+      onLose?: Step[];
+      /** An elite version of the enemy (expedition elite nodes). */
+      elite?: boolean;
+      /** Called instead of the step lists when the fight is over; the caller handles a loss itself. */
+      onFinish?: (won: boolean) => void;
+    },
   ): boolean {
     if (!store.state || store.state.battle) return false;
     if (!store.content.enemies[enemyId]) {
@@ -821,12 +955,12 @@ class Session {
       return false;
     }
     this.battleFromInterp = !!opts.fromInterp;
-    this.battleHandlesLoss = !!opts.handlesLoss || !!opts.onLose;
-    this.battleAfter = { onWin: opts.onWin, onLose: opts.onLose };
-    this.battleReturnMode = store.ui.mode === 'dialog' ? 'dialog' : 'world';
+    this.battleHandlesLoss = !!opts.handlesLoss || !!opts.onLose || !!opts.onFinish;
+    this.battleAfter = { onWin: opts.onWin, onLose: opts.onLose, onFinish: opts.onFinish };
+    this.battleReturnMode = store.ui.mode === 'dialog' ? 'dialog' : store.ui.mode === 'expedition' ? 'expedition' : 'world';
     const ctx = opts.fromInterp && this.dialogCtx ? this.dialogCtx : this.ctx();
     this.battleCtx = ctx;
-    const events = startBattle(ctx, enemyId, opts.source);
+    const events = startBattle(ctx, enemyId, opts.source, { elite: opts.elite });
     store.updateUi({ mode: 'battle', battle: { log: [], busy: true, view: 'main' } });
     bus.emit('battle.start', { enemy: enemyId });
     this.queueBattleEvents(events);
@@ -895,6 +1029,10 @@ class Session {
       return;
     }
     this.flush(ctx);
+    if (after?.onFinish) {
+      after.onFinish(won);
+      return;
+    }
     const steps = won ? after?.onWin : after?.onLose;
     if (steps?.length) this.runSteps(steps, `battle:${result}`, undefined, () => this.setWorld());
     else if (store.ui.mode === 'dialog' && !this.interp) this.setWorld();
@@ -917,8 +1055,9 @@ class Session {
     this.runScript({ nodes: { start: steps } }, id, speaker, onDone);
   }
 
-  runScript(script: Script, id: string, speaker?: string, onDone?: (mode: DoneMode) => void): void {
+  runScript(script: Script, id: string, speaker?: string, onDone?: (mode: DoneMode) => void, extras?: CondExtras): void {
     const ctx = this.ctx(speaker);
+    if (extras) ctx.extras = extras;
     this.dialogCtx = ctx;
     this.interp = new Interpreter(ctx, script, id);
     this.onDone = onDone ?? (() => this.setWorld());
@@ -1074,6 +1213,7 @@ class Session {
     },
     tierLabel: (id: string) => tierForPoints(villagerState(store.state!, store.content, id).friendship),
     startBattle: (enemy: string) => this.startBattle(enemy, { source: 'debug' }),
+    startExpedition: (region: string, party: string[]) => this.expedition.start(region, party),
     setParty: (ids: string[]) => {
       store.state!.party = ids.slice(0, 2);
       store.commit();
