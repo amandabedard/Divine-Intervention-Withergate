@@ -1,0 +1,30 @@
+# SAMPLE items. Resources (gold, wood, ...) are counters, not items.
+items:
+  - id: whetstone
+    name: Whetstone
+    kind: gift
+    description: "A grey stone worn smooth on one face."
+    rarity: common
+    sources: [general_store, cache]
+  - id: hearty_stew
+    name: Hearty Stew
+    kind: gift
+    description: "Still warm, somehow."
+    sources: [tavern]
+  - id: pine_resin
+    name: Pine Resin
+    kind: gift
+    description: "Sticky, sharp-smelling, useful."
+    sources: [gather_wood]
+  - id: perfume
+    name: Perfume
+    kind: gift
+    description: "Aboridge court fashion in a bottle."
+    rarity: uncommon
+    sources: [bazaar]
+  - id: gilded_ring
+    name: Gilded Ring
+    kind: gift
+    description: "More gilt than gold."
+    rarity: uncommon
+    sources: [cache]

@@ -1,0 +1,31 @@
+{
+  "name": "divine-intervention-withergate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "game",
+    "tools/editor"
+  ],
+  "scripts": {
+    "dev": "npm run build:sprites && npm run dev -w game",
+    "editor": "npm run dev -w tools/editor",
+    "build": "npm run build:sprites && npm run build -w game",
+    "build:sprites": "node tools/scripts/build-sprites.mjs",
+    "validate": "tsx packages/shared/src/node/cli.ts validate",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/shared/tsconfig.json && tsc -p game/tsconfig.json && tsc -p tools/editor/tsconfig.json",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,yaml,yml,css,html}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0",
+    "prettier": "^3.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^4.0.0"
+  }
+}

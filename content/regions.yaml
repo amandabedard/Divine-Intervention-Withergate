@@ -1,0 +1,24 @@
+# SAMPLE regions. Used from Phase 7 (expeditions) onward.
+regions:
+  - id: east_road_route
+    name: The East Road
+    description: "[PLACEHOLDER: the road from Withergate to Aboridge.]"
+    kind: route
+    from: withergate
+    to: aboridge
+    days: 2
+    biomes: [plains, forest]
+    danger: 1
+    checkpoints:
+      - pool: [lost_child]
+      - pool: [lost_child]
+  - id: frontier
+    name: The Frontier
+    description: "[PLACEHOLDER: the land that borders the corruption.]"
+    kind: wild
+    from: withergate
+    segments: [1, 3]
+    biomes: [hills, corrupted]
+    danger: 3
+    checkpoints:
+      - pool: [lost_child]

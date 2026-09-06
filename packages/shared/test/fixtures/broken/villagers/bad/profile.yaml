@@ -1,0 +1,10 @@
+id: bad
+name: Bad Example
+profession: logger
+home_town: dilsdurf
+romanceable: false
+bio: "A fixture with deliberate mistakes."
+likes: [tests]
+dislikes: [bugs]
+gifts:
+  loved: [ghost_item]

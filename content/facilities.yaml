@@ -1,0 +1,85 @@
+# Facilities. Descriptions are placeholders until Amanda writes them.
+facilities:
+  - id: your_quarters
+    name: Your Quarters
+    fixed: true
+    description: "[PLACEHOLDER: your quarters. Bed (save, sleep), loadout, storage, building.]"
+  - id: living_quarters
+    name: Living Quarters
+    fixed: true
+    description: "[PLACEHOLDER: where recruited villagers live. Roster, capacity, condition status.]"
+  - id: general_store
+    name: General Store
+    fixed: true
+    description: "[PLACEHOLDER: buy and trade resources.]"
+  - id: tavern
+    name: Tavern
+    fixed: true
+    description: "[PLACEHOLDER: social events, gatherings, and trouble.]"
+    workplace_for: [chef, socialite]
+  - id: barracks
+    name: Barracks
+    description: "[PLACEHOLDER: caravan safety, incursion defence, militia actions.]"
+    cost: { wood: 40, stone: 30, gold: 100 }
+    build_days: 3
+    workplace_for: [warrior]
+    effects:
+      - { type: caravan_safety, percent: 15 }
+      - { type: incursion_defense, amount: 2 }
+  - id: farm
+    name: Farm
+    description: "[PLACEHOLDER: food income; feeds energy bonuses.]"
+    cost: { wood: 30, gold: 60 }
+    build_days: 2
+    workplace_for: [farmer]
+    effects:
+      - { type: resource_income, resource: food, amount: 4 }
+  - id: library
+    name: Library
+    description: "[PLACEHOLDER: research, node previews, lore quests.]"
+    cost: { wood: 30, stone: 40, gold: 120 }
+    build_days: 4
+    workplace_for: [academic]
+    effects:
+      - { type: preview_nodes, columns: 1 }
+  - id: town_hall
+    name: Town Hall
+    description: "[PLACEHOLDER: establish routes to towns and cut travel time; policies; gatherings.]"
+    cost: { wood: 50, stone: 50, gold: 200 }
+    build_days: 5
+    workplace_for: [engineer, socialite]
+    effects:
+      - { type: unlock_action, action: establish_route }
+  - id: bazaar
+    name: Bazaar
+    description: "[PLACEHOLDER: crafting, better trade rates, visiting merchants.]"
+    cost: { wood: 40, cloth: 20, gold: 150 }
+    build_days: 3
+    workplace_for: [craftsman, socialite]
+    effects:
+      - { type: unlock_action, action: craft }
+      - { type: store_rates, percent: 10 }
+  - id: hospital
+    name: Hospital
+    description: "[PLACEHOLDER: heal residents, faster recovery after a death on the road.]"
+    cost: { wood: 30, stone: 30, herbs: 20, gold: 120 }
+    build_days: 3
+    workplace_for: [doctor]
+    effects:
+      - { type: recovery_speed, days: 2 }
+  - id: inn
+    name: Inn
+    description: "[PLACEHOLDER: visitors, recruits, explorer contracts.]"
+    cost: { wood: 50, cloth: 10, gold: 100 }
+    build_days: 3
+    workplace_for: [explorer, socialite]
+    effects:
+      - { type: faith_gain, percent: 10 }
+  - id: restaurant
+    name: Restaurant
+    description: "[PLACEHOLDER: tavern quality, energy max, buffs before expeditions.]"
+    cost: { wood: 30, stone: 20, food: 20, gold: 120 }
+    build_days: 3
+    workplace_for: [chef]
+    effects:
+      - { type: energy_max, amount: 1 }

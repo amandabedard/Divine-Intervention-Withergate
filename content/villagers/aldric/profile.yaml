@@ -1,0 +1,59 @@
+# SAMPLE CHARACTER — exercises every system. Replace freely.
+id: aldric
+name: Aldric
+pronouns: he/him
+profession: warrior
+home_town: aboridge
+romanceable: true
+portrait_set: aldric
+sprite_set: aldric
+
+bio: "[PLACEHOLDER: Aldric's bio. A knight of Aboridge used here as the sample character while the systems are built.]"
+personality: [steady, dry, dutiful]
+
+likes: [honesty, training, plain food]
+dislikes: [flattery, nobility]
+
+gifts:
+  loved: [whetstone]
+  liked: [hearty_stew, pine_resin]
+  disliked: [perfume]
+  hated: [gilded_ring]
+
+tag_affinity:
+  scary: { start_bonus: 5, growth: 1.1 }
+  cute: { start_bonus: -5, growth: 0.9 }
+  liar: { growth: 0.75 }
+
+domain_affinity:
+  combat: { growth: 1.25 }
+  pleasure: { growth: 0.85 }
+
+recruit:
+  requires: { tier: acquaintance+ }
+  method: { kind: chance, chance: 0.5, max_attempts: 3 }
+  leaves_if:
+    - tier: disliked-
+  workplace: barracks
+
+energy: 8
+recovery_days: 5
+
+benefits:
+  town:
+    - { type: caravan_safety, percent: 10 }
+  combat:
+    - { type: passive, effect: intercept_hit, value: 1 }
+
+# SAMPLE: Aboridge has no maps yet, so his "home" schedule keeps him around Withergate.
+schedule:
+  home:
+    morning: { map: withergate, spot: square }
+    afternoon: { map: east_road, spot: milestone }
+    evening: { map: withergate, spot: well }
+    night: { map: none }
+  withergate:
+    morning: { map: withergate, spot: gate }
+    afternoon: { map: withergate, spot: gate }
+    evening: { map: withergate, spot: well }
+    night: { map: none }

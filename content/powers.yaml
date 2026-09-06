@@ -1,0 +1,53 @@
+# SAMPLE powers: one per axis so the skill tree has something to show.
+powers:
+  - id: kindled_word
+    name: Kindled Word
+    description: "A few words that land exactly where they are needed. +2 Charisma on checks today."
+    domain: friendship
+    tier: 1
+    kind: passive
+    effect: { type: check_bonus, stat: charisma, amount: 2 }
+  - id: last_round
+    name: Last Round
+    description: "Tavern gatherings run one phase longer and everyone leaves in a better mood."
+    domain: pleasure
+    tier: 1
+    kind: town
+    effect: { type: tavern_quality, amount: 1 }
+  - id: full_granary
+    name: Full Granary
+    description: "Withergate stores yield a little more every morning."
+    domain: prosperity
+    tier: 1
+    kind: town
+    effect: { type: resource_income, resource: food, amount: 1 }
+  - id: smite
+    name: Smite
+    description: "A bolt of borrowed heaven."
+    domain: combat
+    tier: 1
+    kind: combat
+    cost: 4
+    target: enemy
+    power: 1.3
+    damage_type: divine
+  - id: wayfinding
+    name: Wayfinding
+    description: "You see one column further along the road."
+    domain: discovery
+    tier: 1
+    kind: travel
+    effect: { type: preview_nodes, columns: 1 }
+  - id: smite_ii
+    name: Greater Smite
+    description: "The bolt lingers and burns."
+    domain: combat
+    tier: 2
+    requires: [smite]
+    points: 2
+    kind: combat
+    cost: 7
+    target: enemy
+    power: 1.8
+    damage_type: divine
+    effect: { status: burning, turns: 2 }

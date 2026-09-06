@@ -1,0 +1,26 @@
+# SAMPLE expedition event.
+id: lost_child
+name: "A Child on the Road"
+node: event
+weight: 1
+where: { biomes: [forest, plains], time: [morning, afternoon], corruption_max: 3 }
+script:
+  - narrate: "A child sits at the roadside, crying without sound."
+  - choice:
+      - text: "Comfort them and look for their parents."
+        check: { stat: charisma, dc: 10 }
+        success:
+          - narrate: "A woodcutter comes running. He presses a bundle into your hands."
+          - effects: { resources: { food: 3 }, tags: [kind], domain_points: { friendship: 1 } }
+        fail:
+          - narrate: "The child bolts into the trees. You lose an hour searching."
+          - effects: { energy: -1 }
+      - text: "Corruption uses bait. Keep walking."
+        effects: { tags: [callous] }
+      - text: "Look closer before deciding."
+        check: { stat: perception, dc: 12 }
+        success:
+          - narrate: "The tears are real. The shadow under the child is not. You step back as it thins into nothing."
+          - effects: { domain_points: { discovery: 2 }, faith: 1 }
+        fail:
+          - narrate: "You see a crying child. That is all you see."

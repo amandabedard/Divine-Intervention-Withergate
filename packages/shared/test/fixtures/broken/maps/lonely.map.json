@@ -1,0 +1,10 @@
+{
+  "id": "lonely",
+  "version": 1,
+  "size": { "width": 1280, "height": 720 },
+  "ground_y": 640,
+  "entities": [
+    { "type": "spawn", "id": "default", "x": 100, "y": 640 },
+    { "type": "exit", "id": "east", "x": 1240, "y": 400, "w": 40, "h": 240, "direction": "right", "to": { "map": "nowhere", "spawn": "x" } }
+  ]
+}

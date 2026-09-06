@@ -1,0 +1,4 @@
+pools:
+  - when: { teir: stranger }
+    lines:
+      - "This pool has a typo in its condition."

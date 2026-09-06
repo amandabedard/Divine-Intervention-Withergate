@@ -1,0 +1,16 @@
+# SAMPLE weapons.
+weapons:
+  - id: woodaxe
+    name: Woodaxe
+    description: "Meant for trees. Works on other things."
+    damage_type: blade
+    power: 1.0
+    trait: { on_hit: { status: bleed, chance: 0.2, turns: 2 } }
+    source: { starting: true }
+  - id: pilgrim_staff
+    name: Pilgrim's Staff
+    description: "Light, long, and faintly warm to the touch."
+    damage_type: divine
+    power: 0.8
+    grace_regen: 1
+    source: { starting: true }

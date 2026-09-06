@@ -1,0 +1,20 @@
+{
+  "name": "@withergate/editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174 --open",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@withergate/shared": "*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0"
+  }
+}

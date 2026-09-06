@@ -1,0 +1,69 @@
+# SAMPLE discuss topics.
+topics:
+  - id: about_aboridge
+    label: "Ask about Aboridge"
+    marker: heart
+    script:
+      - aldric: "Aboridge is a city of walls. The high ones keep the hollows out. The low ones keep the poor in."
+      - aldric(sad): "I served on the high ones."
+      - choice:
+          - text: "Which walls do you believe in?"
+            effects: { friendship: 5, romance: 2 }
+            then:
+              - aldric(happy): "...That's the first honest question anyone's asked me since I got here."
+              - effects: { flags: { aldric_walls_asked: true } }
+          - text: "Walls are walls."
+            effects: { friendship: -4, tags: [callous] }
+            then:
+              - aldric(angry): "Spoken like someone who's never been on the wrong side of one."
+          - text: "[Flatter] A knight like you belongs on the high wall."
+            check: { stat: charisma, dc: 12 }
+            success:
+              - aldric(happy): "Flattery. But well aimed."
+              - effects: { friendship: 2 }
+            fail:
+              - aldric(angry): "I said I don't care for flattery. I meant it."
+              - effects: { friendship: -3 }
+
+  - id: sparring
+    label: "Ask him to spar"
+    marker: quest
+    requires: { tier: acquaintance+, quest: { id: aldric_sparring, status: not_started } }
+    script:
+      - aldric: "You want to learn the sword from me?"
+      - aldric(happy): "Fine. Bring me a whetstone first. Mine is worn to a sliver."
+      - effects: { quest_start: aldric_sparring }
+
+  - id: sparring_done
+    label: "About the sparring"
+    marker: quest
+    requires: { quest: { id: aldric_sparring, status: active, stage: report } }
+    script:
+      - aldric(happy): "You found one. Good. Tomorrow at dawn, then. Don't be late."
+      - effects: { flags: { aldric_sparring_reported: true }, domain_points: { combat: 2 } }
+
+  - id: the_fall
+    label: "Tell him about the fall"
+    marker: heart
+    requires: { tier: friend+ }
+    cost: phase
+    script:
+      nodes:
+        start:
+          - aldric: "So. The heavens. What did you do to get thrown out?"
+          - goto: hub
+        hub:
+          - choice:
+              - text: "Nothing in particular. That was the problem."
+                once: true
+                effects: { friendship: 4 }
+                then:
+                  - aldric(happy): "A god of nothing in particular. I like that better than most gods I've heard of."
+                  - goto: hub
+              - text: "I'd rather not say."
+                once: true
+                then:
+                  - aldric: "Fair."
+                  - goto: hub
+              - text: "That's all."
+                then: [ end ]

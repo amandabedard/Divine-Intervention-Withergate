@@ -1,0 +1,244 @@
+import {
+  DOMAINS,
+  FIXED_FACILITIES,
+  PHASES,
+  RESOURCES,
+  STATS,
+  faithLevelFor,
+  mapEntities,
+} from '@withergate/shared';
+import type {
+  ContentBundle,
+  Domain,
+  FlagValue,
+  Form,
+  Label,
+  Phase,
+  QuestStatus,
+  Relation,
+  Resource,
+  RomanceState,
+  Stat,
+} from '@withergate/shared';
+
+export const SAVE_VERSION = 1;
+
+export interface PlayerState {
+  name: string;
+  form: Form;
+  label: Label;
+  stats: Record<Stat, number>;
+  level: number;
+  xp: number;
+  hp: number;
+  grace: number;
+  energy: number;
+  weaponId: string | null;
+  powers: string[];
+  equippedPowers: string[];
+  skillPoints: number;
+  domainPoints: Record<Domain, number>;
+  faith: number;
+  tags: string[];
+  /** Temporary tags: tag -> absolute phase index at which it expires. */
+  tempTags: Record<string, number>;
+  satchel: string[];
+}
+
+export interface VillagerState {
+  met: boolean;
+  friendship: number;
+  romance: number;
+  romanceState: RomanceState;
+  resident: boolean;
+  /** Left the game for good. */
+  gone: boolean;
+  energy: number;
+  recoveryUntilDay: number;
+  topicsDone: string[];
+  eventsSeen: string[];
+  recentChat: string[];
+  giftedDay: number;
+  chattedDay: number;
+  flirtedDay: number;
+  recruitAttempts: number;
+  unhappy: { reason: string; daysLeft: number } | null;
+}
+
+export interface QuestState {
+  status: QuestStatus;
+  stage: string;
+  startedDay: number;
+}
+
+export interface GameState {
+  version: number;
+  meta: { seed: number; created: string; playedPhases: number };
+  player: PlayerState;
+  time: { day: number; phase: Phase };
+  where: { map: string; x: number; facing: 'left' | 'right' };
+  town: {
+    facilities: string[];
+    buildQueue: { facility: string; daysLeft: number }[];
+    resources: Record<Resource, number>;
+    storage: Record<string, number>;
+  };
+  villagers: Record<string, VillagerState>;
+  quests: Record<string, QuestState>;
+  flags: Record<string, FlagValue>;
+  choicesMade: string[];
+  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[] };
+  scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
+  log: string[];
+  rng: number;
+}
+
+export interface NewGameOptions {
+  name: string;
+  form: Form;
+  label: Label;
+  stats: Record<Stat, number>;
+  seed?: number;
+  startMap?: string;
+  startSpawn?: string;
+}
+
+export function defaultStats(content: ContentBundle): Record<Stat, number> {
+  const s = content.progression.stats.start;
+  return Object.fromEntries(STATS.map((k) => [k, s])) as Record<Stat, number>;
+}
+
+export function newGame(content: ContentBundle, opts: NewGameOptions): GameState {
+  const seed = opts.seed ?? (Date.now() % 2147483647);
+  const startMap = opts.startMap ?? (content.maps.withergate ? 'withergate' : Object.keys(content.maps)[0] ?? 'withergate');
+  const map = content.maps[startMap];
+  const spawn = map ? mapEntities(map, 'spawn').find((s) => s.id === (opts.startSpawn ?? 'default')) ?? mapEntities(map, 'spawn')[0] : undefined;
+  const startingWeapon = Object.values(content.weapons).find((w) => w.source?.starting)?.id ?? null;
+  const prog = content.progression;
+
+  const state: GameState = {
+    version: SAVE_VERSION,
+    meta: { seed, created: new Date().toISOString(), playedPhases: 0 },
+    player: {
+      name: opts.name,
+      form: opts.form,
+      label: opts.label,
+      stats: { ...opts.stats },
+      level: 1,
+      xp: 0,
+      hp: prog.base.hp,
+      grace: prog.grace.base + prog.grace.per_divinity * prog.base.divinity,
+      energy: prog.energy.player_max,
+      weaponId: startingWeapon,
+      powers: [],
+      equippedPowers: [],
+      skillPoints: 0,
+      domainPoints: Object.fromEntries(DOMAINS.map((d) => [d, 0])) as Record<Domain, number>,
+      faith: 0,
+      tags: [opts.label],
+      tempTags: {},
+      satchel: [],
+    },
+    time: { day: 1, phase: 'morning' },
+    where: { map: startMap, x: spawn?.x ?? 300, facing: spawn?.facing ?? 'right' },
+    town: {
+      facilities: [...FIXED_FACILITIES],
+      buildQueue: [],
+      resources: { ...(Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>), gold: 50, wood: 20 },
+      // DEV DEFAULT: two sample gifts so the gift menu can be tested before storage exists.
+      storage: { whetstone: 1, hearty_stew: 1 },
+    },
+    villagers: {},
+    quests: {},
+    flags: {},
+    choicesMade: [],
+    world: { corruption: 1, relations: {}, unlockedMaps: [] },
+    scheduleOverrides: {},
+    log: [],
+    rng: seed >>> 0,
+  };
+  return state;
+}
+
+export function villagerState(state: GameState, content: ContentBundle, id: string): VillagerState {
+  let v = state.villagers[id];
+  if (!v) {
+    const profile = content.villagers[id]?.profile;
+    v = {
+      met: false,
+      friendship: 0,
+      romance: 0,
+      romanceState: 'neutral',
+      resident: false,
+      gone: false,
+      energy: profile?.energy ?? 6,
+      recoveryUntilDay: 0,
+      topicsDone: [],
+      eventsSeen: [],
+      recentChat: [],
+      giftedDay: 0,
+      chattedDay: 0,
+      flirtedDay: 0,
+      recruitAttempts: 0,
+      unhappy: null,
+    };
+    state.villagers[id] = v;
+  }
+  return v;
+}
+
+export function phaseAbs(state: GameState): number {
+  return state.time.day * PHASES.length + PHASES.indexOf(state.time.phase);
+}
+
+export function activeTags(state: GameState): string[] {
+  const now = phaseAbs(state);
+  const temp = Object.entries(state.player.tempTags)
+    .filter(([, until]) => until > now)
+    .map(([t]) => t);
+  return [...new Set([...state.player.tags, ...temp])];
+}
+
+export function domainLean(state: GameState): Domain | 'none' {
+  let best: Domain | 'none' = 'none';
+  let bestPts = 0;
+  let tie = false;
+  for (const d of DOMAINS) {
+    const p = state.player.domainPoints[d];
+    if (p > bestPts) {
+      best = d;
+      bestPts = p;
+      tie = false;
+    } else if (p === bestPts && p > 0) {
+      tie = true;
+    }
+  }
+  return tie ? 'none' : best;
+}
+
+export function faithLevel(state: GameState, content: ContentBundle): number {
+  return faithLevelFor(state.player.faith, content.progression.faith_levels);
+}
+
+export function maxHp(state: GameState, content: ContentBundle): number {
+  const p = content.progression;
+  const lean = domainLean(state);
+  const extra = lean === 'none' ? 0 : (p.lean_growth[lean]?.hp ?? 0);
+  return Math.round(p.base.hp + (p.per_level.hp + extra) * (state.player.level - 1));
+}
+
+export function maxGrace(state: GameState, content: ContentBundle): number {
+  const p = content.progression;
+  const divinity = p.base.divinity + p.per_level.divinity * (state.player.level - 1);
+  return Math.round(p.grace.base + p.grace.per_divinity * divinity);
+}
+
+export function maxEnergy(state: GameState, content: ContentBundle): number {
+  return content.progression.energy.player_max;
+}
+
+export function residents(state: GameState): string[] {
+  return Object.entries(state.villagers)
+    .filter(([, v]) => v.resident && !v.gone)
+    .map(([id]) => id);
+}

@@ -1,0 +1,23 @@
+# dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# generated at build time from assets/ (npm run build:sprites)
+game/public/generated/
+
+# raw numbered frame exports; only the named frames (idle1.png, leftwalk1.png, ...) are used
+# (see docs/OPEN_QUESTIONS.md E4 - remove this rule if you want them tracked)
+assets/**/frame_*.png
+
+# assets moved aside by the editor's prune action
+assets/_unused/
+
+# editor and OS noise
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

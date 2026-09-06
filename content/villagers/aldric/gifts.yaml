@@ -1,0 +1,14 @@
+# SAMPLE gift reactions.
+reactions:
+  loved: [ aldric(happy): "A proper edge again. You have no idea.", aldric(happy): "This is exactly what I needed." ]
+  liked: [ "Useful. Thank you.", aldric(happy): "Huh. Good pick." ]
+  neutral: [ "...Thanks." ]
+  disliked: [ aldric(neutral): "What am I supposed to do with this?" ]
+  hated: [ aldric(angry): "Gold. From you. Do I look like a courtier?" ]
+overrides:
+  whetstone:
+    - when: { quest: { id: aldric_sparring, status: active, stage: find_whetstone } }
+      lines: [ aldric(happy): "That's the one. Now we can spar." ]
+      effects: { friendship: 10, quest_advance: { id: aldric_sparring, to: report } }
+    - lines: [ aldric(happy): "Another? A soldier can never have too many." ]
+      effects: { friendship: 8 }

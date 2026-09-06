@@ -1,0 +1,8 @@
+topics:
+  - id: broken
+    label: "A broken topic"
+    script:
+      nodes:
+        start:
+          - nobody: "I do not exist."
+          - goto: missing

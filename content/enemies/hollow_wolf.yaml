@@ -1,0 +1,16 @@
+# SAMPLE enemy.
+id: hollow_wolf
+name: Hollow Wolf
+description: "A wolf that forgot how to stop being hungry."
+stats: { hp: 24, attack: 7, defense: 2, speed: 6 }
+damage_type: beast
+resistances: { blade: 1.25, blunt: 1.0, pierce: 0.75, divine: 1.0 }
+moves:
+  - { id: bite, name: Bite, weight: 3, power: 1.0 }
+  - { id: howl, name: Howl, weight: 1, effect: { status: attack_up, turns: 2 } }
+  - { id: frenzy, name: Frenzy, weight: 2, power: 1.4, when: { hp_below: 0.4 } }
+xp: 12
+loot: { food: 2 }
+spare: { possible: true, check: { stat: perception, dc: 12 }, tags: [merciful], xp: 8 }
+tags_on_kill: []
+appears: { biomes: [forest, corrupted], time: [evening, night] }

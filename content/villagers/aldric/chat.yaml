@@ -1,0 +1,40 @@
+# SAMPLE chat pools. Bare strings are spoken by Aldric with the neutral bust.
+pools:
+  - when: { tier: stranger }
+    lines:
+      - "You're the one who fell out of the sky. (sample stranger chat)"
+      - aldric(neutral): "Withergate. Hm. Brave, or you had no choice."
+      - "The road east is quiet in the mornings. Less so after dark."
+      - - aldric: "Do they really call you a god?"
+        - choice:
+            - text: "Half of one."
+              effects: { friendship: 1 }
+              then: [ aldric(happy): "Half is more than most manage." ]
+            - text: "They will."
+              effects: { tags: [cool] }
+              then: [ aldric: "...We'll see." ]
+
+  - when: { tier: acquaintance+ }
+    lines:
+      - "Trained at dawn. Shoulder's complaining. (sample acquaintance chat)"
+      - aldric(happy): "The well water here is better than Aboridge's. Don't tell the king."
+      - "If you head east, keep to the road. The hollows don't like open ground."
+      - aldric(sad): "Quiet day. I don't mind quiet days."
+
+  - when: { tier: friend+, time: [evening, night] }
+    weight: 2
+    lines:
+      - aldric(happy): "Sit. The fire's going anyway. (sample friend chat)"
+      - "You look like you carried the whole road home on your back."
+
+  - when: { romance: interest }
+    lines:
+      - aldric(happy): "Oh. It's you. Good. (sample crush chat)"
+
+  - when: { romance: lover }
+    lines:
+      - aldric(happy): "Come here. I don't care who's watching. (sample lover chat)"
+
+  - when: { tier: disliked- }
+    lines:
+      - aldric(angry): "Say what you need and go."

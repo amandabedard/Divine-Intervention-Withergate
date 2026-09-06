@@ -1,0 +1,7 @@
+# SAMPLE barks while travelling with you.
+battle_start: [ "Stay behind me.", aldric(happy): "Finally." ]
+low_hp: [ "Don't you dare fall." ]
+withdraw: [ aldric(sad): "I'm spent. I'll see you at home." ]
+rest: [ "Sleep. I'll take the watch." ]
+night: [ aldric(neutral): "Something's moving out there." ]
+victory: [ aldric(happy): "Clean work." ]

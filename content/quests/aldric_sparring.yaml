@@ -1,0 +1,16 @@
+# SAMPLE personal quest.
+id: aldric_sparring
+title: "An Edge to Keep"
+type: personal
+giver: aldric
+summary: "Aldric will teach you the sword once he has a whetstone worth the name."
+stages:
+  - id: find_whetstone
+    objective: "Find a whetstone and give it to Aldric."
+    complete_when: { quest: { id: aldric_sparring, stage: report } }
+  - id: report
+    objective: "Talk to Aldric about sparring."
+    complete_when: { flags: [aldric_sparring_reported] }
+rewards: { xp: 40, friendship: { aldric: 10 }, faith: 5, domain_points: { combat: 3, friendship: 1 } }
+journal_notes:
+  report: "He looked almost pleased. Almost."

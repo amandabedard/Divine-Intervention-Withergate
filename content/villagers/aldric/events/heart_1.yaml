@@ -1,0 +1,27 @@
+# SAMPLE heart event: plays once when you enter Withergate in the evening as his friend.
+id: aldric_heart_1
+title: "The Well"
+trigger:
+  on: enter_map
+  requires: { tier: friend+, time: evening, map: withergate }
+  once: true
+  priority: 10
+stage:
+  map: withergate
+  place: { aldric: well, player: square }
+script:
+  - fade: in
+  - move: { who: player, to: well, wait: true }
+  - aldric: "There you are. Sit."
+  - aldric(sad): "I wrote to my sister today. First time in a year. Told her about this place."
+  - choice:
+      - text: "What did you tell her?"
+        effects: { friendship: 6, romance: 3 }
+        then:
+          - aldric(happy): "That the water's good. That the company is... unexpected."
+      - text: "You have a sister?"
+        effects: { friendship: 2 }
+        then:
+          - aldric: "Had. Have. It's complicated. Another night."
+  - effects: { flags: { aldric_heart_1_seen: true } }
+  - end: scene

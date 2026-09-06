@@ -1,0 +1,15 @@
+{
+  "name": "@withergate/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3",
+    "yaml": "^2.8.0",
+    "zod": "^4.1.0"
+  }
+}

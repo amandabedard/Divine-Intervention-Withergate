@@ -1,0 +1,11 @@
+# SAMPLE recruit conversation. The 50% chance / 3 attempts rule comes from profile.yaml.
+topic_label: "Come to Withergate"
+script:
+  - aldric: "You want me to leave the king's service for a field on the edge of hell."
+  - aldric(neutral): "...Let me think on it."
+unhappy:
+  - when: { reason: tier }
+    lines: [ aldric(angry): "I didn't come here to be treated like a servant." ]
+  - lines: [ aldric(sad): "This isn't working out." ]
+farewell:
+  - aldric(sad): "I'm going back to the wall. Don't follow."

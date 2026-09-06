@@ -1,0 +1,15 @@
+# SAMPLE enemy.
+id: road_bandit
+name: Road Bandit
+description: "Desperate more than dangerous. Usually."
+stats: { hp: 30, attack: 6, defense: 3, speed: 5 }
+damage_type: blade
+resistances: { blade: 1.0, blunt: 1.25, pierce: 1.0, divine: 1.1 }
+moves:
+  - { id: slash, name: Slash, weight: 3, power: 1.0 }
+  - { id: feint, name: Feint, weight: 1, effect: { status: defense_up, turns: 1 } }
+xp: 15
+loot: { gold: 6 }
+gift_drop: { item: gilded_ring, chance: 0.1 }
+spare: { possible: true, check: { stat: charisma, dc: 11 }, tags: [merciful], xp: 10 }
+appears: { biomes: [plains, forest, hills], time: [morning, afternoon, evening] }

@@ -1,0 +1,19 @@
+# SAMPLE flirt pools. Only the first flirt of the day applies effects.
+pools:
+  - when: { tier: stranger }
+    effects: {}
+    lines:
+      - aldric(neutral): "We've spoken twice. (sample rebuff)"
+  - when: { romance: neutral, tier: acquaintance+ }
+    effects: { romance: 3 }
+    lines:
+      - aldric(neutral): "...Was that meant for me?"
+      - aldric(happy): "Careful. I might start to believe you."
+  - when: { romance: interest }
+    effects: { romance: 4 }
+    lines:
+      - aldric(happy): "Stop. ...No. Don't."
+  - when: { romance: lover }
+    effects: { friendship: 1 }
+    lines:
+      - aldric(happy): "You already have me. But go on."

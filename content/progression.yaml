@@ -1,0 +1,18 @@
+# Numbers that tune progression. See docs/design/gdd.md §15.
+level_cap: 20
+xp_curve: [0, 20, 50, 90, 140, 200, 270, 350, 440, 540, 650, 770, 900, 1040, 1190, 1350, 1520, 1700, 1890, 2090]
+base: { hp: 30, attack: 6, defense: 3, speed: 5, divinity: 4 }
+per_level: { hp: 4, attack: 1, defense: 0.5, speed: 0.5, divinity: 0.5 }
+lean_growth:
+  combat: { attack: 0.5, hp: 1 }
+  friendship: { defense: 0.5 }
+  pleasure: { speed: 0.5 }
+  prosperity: { hp: 2 }
+  discovery: { divinity: 0.5 }
+faith_levels: [0, 10, 25, 50, 90, 140]
+skill_points_per_faith_level: 1
+domain_milestone: 40
+grace: { base: 10, per_divinity: 2 }
+stats: { start: 2, points: 15, max_at_creation: 8, max: 10 }
+energy: { player_max: 8, companion_recovery_per_day: 2, death_recovery_days: 5 }
+caravan: { loss_chance_end: 0.3, loss_chance_checkpoint: 0.5, loss_fraction: [0.25, 0.5] }
