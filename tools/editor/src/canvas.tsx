@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { WALK_LINE_OFFSET } from '@withergate/shared';
-import type { GameMap, MapEntity, Placement } from '@withergate/shared';
+import type { AssetEntry, GameMap, MapEntity, Placement } from '@withergate/shared';
 import { LAYERS, editor, useEditor } from './state';
 import type { EditorState, LayerName, Selection } from './state';
 
@@ -14,6 +14,10 @@ interface Rect {
 const MANNEQUIN = { w: 46, h: 88 }; // a character at game scale
 const SLOT_SIZE = { large: { w: 320, h: 240 }, small: { w: 200, h: 160 } };
 const HANDLE = 7;
+/** Smallest map the game camera can show. */
+const MIN_MAP = { w: 1280, h: 720 };
+/** How far past the map edges the view can scroll, as a share of the viewport. */
+const MARGIN = 0.6;
 
 const images = new Map<string, HTMLImageElement>();
 let redrawHook: (() => void) | null = null;
@@ -159,6 +163,15 @@ function resize(r: Rect, h: HandleName, dx: number, dy: number): Rect {
   return { x, y, w, h: hgt };
 }
 
+/** Which map edge (if any) is within `tol` world units of a point. */
+function mapEdgeAt(map: GameMap, x: number, y: number, tol: number): 'right' | 'bottom' | null {
+  const W = map.size.width;
+  const H = map.size.height;
+  if (Math.abs(x - W) <= tol && y >= -tol && y <= H + tol) return 'right';
+  if (Math.abs(y - H) <= tol && x >= -tol && x <= W + tol) return 'bottom';
+  return null;
+}
+
 // --- drawing ----------------------------------------------------------------
 
 function hills(ctx: CanvasRenderingContext2D, color: string, baseY: number, width: number, seed: number): void {
@@ -173,6 +186,12 @@ function hills(ctx: CanvasRenderingContext2D, color: string, baseY: number, widt
   ctx.lineTo(width + step, 900);
   ctx.closePath();
   ctx.fill();
+}
+
+function drawImageEntry(ctx: CanvasRenderingContext2D, entry: AssetEntry | undefined, img: HTMLImageElement, x: number, y: number, w: number, h: number): void {
+  ctx.imageSmoothingEnabled = !entry?.pixel;
+  ctx.drawImage(img, x, y, w, h);
+  ctx.imageSmoothingEnabled = true;
 }
 
 function drawMap(ctx: CanvasRenderingContext2D, st: EditorState, size: { w: number; h: number }): void {
@@ -199,7 +218,7 @@ function drawMap(ctx: CanvasRenderingContext2D, st: EditorState, size: { w: numb
           const img = entry ? imageFor(entry.file) : null;
           if (img) {
             for (let x = 0; x < W; x += img.naturalWidth) {
-              ctx.drawImage(img, x, layer.y);
+              drawImageEntry(ctx, entry, img, x, layer.y, img.naturalWidth, img.naturalHeight);
               if (!layer.repeatX) break;
             }
             return;
@@ -278,7 +297,9 @@ function drawMap(ctx: CanvasRenderingContext2D, st: EditorState, size: { w: numb
           ctx.scale(-1, 1);
           ctx.translate(-p.x, -p.y);
         }
-        for (let i = 0; i < reps; i += 1) ctx.drawImage(img, p.x + i * img.naturalWidth * scale, p.y, img.naturalWidth * scale, img.naturalHeight * scale);
+        for (let i = 0; i < reps; i += 1) {
+          drawImageEntry(ctx, entry, img, p.x + i * img.naturalWidth * scale, p.y, img.naturalWidth * scale, img.naturalHeight * scale);
+        }
         ctx.restore();
       } else {
         ctx.fillStyle = 'rgba(255,0,255,0.25)';
@@ -375,10 +396,16 @@ function drawMap(ctx: CanvasRenderingContext2D, st: EditorState, size: { w: numb
     }
   }
 
-  // map border
+  // map border and edge handles (drag the right or bottom edge to resize the map)
   ctx.strokeStyle = 'rgba(255,255,255,0.5)';
   ctx.lineWidth = 2 / st.zoom;
   ctx.strokeRect(0, 0, W, H);
+  const tab = 36 / st.zoom;
+  ctx.fillStyle = 'rgba(217,182,106,0.85)';
+  ctx.fillRect(W - 4 / st.zoom, H / 2 - tab, 8 / st.zoom, tab * 2);
+  ctx.fillRect(W / 2 - tab, H - 4 / st.zoom, tab * 2, 8 / st.zoom);
+  label('⇔ drag to widen', W + 8 / st.zoom + 60 / st.zoom, H / 2 + 5 / st.zoom, 'rgba(233,226,211,0.7)', 12);
+  label(`${W} × ${H}`, W / 2, H + 22 / st.zoom, 'rgba(233,226,211,0.7)', 12);
 
   // selection
   if (st.selection) {
@@ -403,24 +430,56 @@ type Drag =
   | { kind: 'pan'; startX: number; startY: number; panX: number; panY: number }
   | { kind: 'move'; sel: NonNullable<Selection>; startX: number; startY: number; orig: Rect; moved: boolean }
   | { kind: 'resize'; sel: NonNullable<Selection>; handle: HandleName; startX: number; startY: number; orig: Rect }
-  | { kind: 'draw'; startX: number; startY: number; index: number };
+  | { kind: 'draw'; startX: number; startY: number; index: number }
+  | { kind: 'map-edge'; side: 'right' | 'bottom' };
 
 export function MapCanvas() {
   const st = useEditor();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [hover, setHover] = useState<'right' | 'bottom' | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const spaceRef = useRef(false);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
+  // The view scrolls natively: a spacer as big as the zoomed map plus margins
+  // sits behind a sticky canvas, and the scroll offset is the pan.
+  const marginX = Math.round(size.w * MARGIN);
+  const marginY = Math.round(size.h * MARGIN);
+  const spaceW = Math.round((st.map?.size.width ?? MIN_MAP.w) * st.zoom + 2 * marginX);
+  const spaceH = Math.round((st.map?.size.height ?? MIN_MAP.h) * st.zoom + 2 * marginY);
+
   useEffect(() => {
-    const el = wrapRef.current!;
-    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
+    const el = scrollRef.current!;
+    const measure = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setSize({ w, h });
+      editor.set({ view: { w, h } });
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
     return () => ro.disconnect();
   }, []);
+
+  // pan -> scroll position
+  useLayoutEffect(() => {
+    const el = scrollRef.current!;
+    const left = marginX - st.pan.x;
+    const top = marginY - st.pan.y;
+    if (Math.abs(el.scrollLeft - left) > 0.5) el.scrollLeft = left;
+    if (Math.abs(el.scrollTop - top) > 0.5) el.scrollTop = top;
+  }, [st.pan, st.zoom, marginX, marginY, spaceW, spaceH]);
+
+  // scroll position -> pan
+  const onScroll = () => {
+    const el = scrollRef.current!;
+    const pan = { x: marginX - el.scrollLeft, y: marginY - el.scrollTop };
+    const cur = editor.state.pan;
+    if (Math.abs(pan.x - cur.x) > 0.5 || Math.abs(pan.y - cur.y) > 0.5) editor.set({ pan });
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -431,12 +490,10 @@ export function MapCanvas() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const draw = () => {
       ctx.save();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const inner = ctx;
       // drawMap sets its own transform relative to identity; account for dpr by scaling pan/zoom
       const scaled: EditorState = { ...editor.state, zoom: editor.state.zoom * dpr, pan: { x: editor.state.pan.x * dpr, y: editor.state.pan.y * dpr } };
-      inner.setTransform(1, 0, 0, 1, 0, 0);
-      drawMap(inner, scaled, { w: size.w * dpr, h: size.h * dpr });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      drawMap(ctx, scaled, { w: size.w * dpr, h: size.h * dpr });
       ctx.restore();
     };
     redrawHook = draw;
@@ -464,6 +521,22 @@ export function MapCanvas() {
     };
   }, []);
 
+  // Ctrl+wheel (and trackpad pinch) zooms around the cursor; a plain wheel scrolls
+  // the view, Shift+wheel scrolls sideways. Non-passive so the browser's own zoom
+  // is suppressed.
+  useEffect(() => {
+    const el = scrollRef.current!;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      editor.zoomAt(editor.state.zoom * factor, e.clientX - rect.left, e.clientY - rect.top);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   const toWorld = (e: { clientX: number; clientY: number }) => {
     const rect = canvasRef.current!.getBoundingClientRect();
     const s = editor.state;
@@ -473,7 +546,11 @@ export function MapCanvas() {
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = editor.state;
     const map = s.map;
-    canvasRef.current!.setPointerCapture(e.pointerId);
+    try {
+      canvasRef.current!.setPointerCapture(e.pointerId);
+    } catch {
+      // synthetic events (tests) have no active pointer to capture
+    }
     if (e.button === 1 || spaceRef.current || (e.button === 0 && e.altKey)) {
       dragRef.current = { kind: 'pan', startX: e.clientX, startY: e.clientY, panX: s.pan.x, panY: s.pan.y };
       return;
@@ -483,6 +560,11 @@ export function MapCanvas() {
     const snap = (v: number) => editor.snapValue(v);
 
     if (s.tool === 'select') {
+      const edge = mapEdgeAt(map, w.x, w.y, 8 / s.zoom);
+      if (edge) {
+        dragRef.current = { kind: 'map-edge', side: edge };
+        return;
+      }
       // resize handle?
       if (s.selection && isRectLike(map, s.selection)) {
         const b = boundsOf(s, map, s.selection);
@@ -555,13 +637,24 @@ export function MapCanvas() {
     const w = toWorld(e);
     setCursor({ x: Math.round(w.x), y: Math.round(w.y) });
     const d = dragRef.current;
-    if (!d) return;
     const s = editor.state;
+    if (!d) {
+      const edge = s.map && s.tool === 'select' ? mapEdgeAt(s.map, w.x, w.y, 8 / s.zoom) : null;
+      if (edge !== hover) setHover(edge);
+      return;
+    }
     if (d.kind === 'pan') {
       editor.set({ pan: { x: d.panX + (e.clientX - d.startX), y: d.panY + (e.clientY - d.startY) } });
       return;
     }
     if (!s.map) return;
+    if (d.kind === 'map-edge') {
+      editor.updateMap((m) => {
+        if (d.side === 'right') m.size.width = Math.max(MIN_MAP.w, editor.snapValue(w.x));
+        else m.size.height = Math.max(MIN_MAP.h, editor.snapValue(w.y));
+      }, `map:${d.side}`);
+      return;
+    }
     const dx = w.x - d.startX;
     const dy = w.y - d.startY;
     if (d.kind === 'move') {
@@ -604,35 +697,40 @@ export function MapCanvas() {
     dragRef.current = null;
   };
 
-  const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    const s = editor.state;
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const zoom = Math.min(3, Math.max(0.1, s.zoom * factor));
-    const wx = (mx - s.pan.x) / s.zoom;
-    const wy = (my - s.pan.y) / s.zoom;
-    editor.set({ zoom, pan: { x: mx - wx * zoom, y: my - wy * zoom } });
-  };
-
-  const cursorStyle = st.tool === 'select' ? 'default' : st.tool === 'erase' ? 'not-allowed' : 'crosshair';
+  const cursorStyle =
+    hover === 'right' ? 'ew-resize' : hover === 'bottom' ? 'ns-resize' : st.tool === 'select' ? 'default' : st.tool === 'erase' ? 'not-allowed' : 'crosshair';
 
   return (
-    <div className="canvas-wrap" ref={wrapRef}>
-      <canvas
-        ref={canvasRef}
-        style={{ width: size.w, height: size.h, cursor: cursorStyle }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onWheel={onWheel}
-        onContextMenu={(e) => e.preventDefault()}
-      />
+    <div className="canvas-area">
+      <div className="canvas-scroll" ref={scrollRef} onScroll={onScroll}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: size.w, height: size.h, cursor: cursorStyle }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onContextMenu={(e) => e.preventDefault()}
+        />
+        <div className="scroll-space" style={{ width: spaceW, height: spaceH }} />
+      </div>
       <div className="canvas-status">
-        {st.map ? `${st.map.id} · ${st.map.size.width}×${st.map.size.height} · ground ${st.map.ground_y}` : 'no map'} · cursor {cursor.x}, {cursor.y} · zoom {Math.round(st.zoom * 100)}% ·
-        space+drag or middle mouse to pan · wheel to zoom
+        <span>
+          {st.map ? `${st.map.id} · ${st.map.size.width}×${st.map.size.height} · ground ${st.map.ground_y}` : 'no map'} · cursor {cursor.x}, {cursor.y} · zoom{' '}
+          {Math.round(st.zoom * 100)}%
+        </span>
+        <span className="hint">scroll or drag the bars to move · Shift+scroll sideways · Ctrl+scroll to zoom · Space+drag or middle mouse to pan · drag the map's edge to resize</span>
+        <span className="row tight">
+          <button className="subtle" onClick={() => editor.extendMap('left', 640)} disabled={!st.map} title="Add 640px on the left (everything shifts right)">
+            ⇐ +640
+          </button>
+          <button className="subtle" onClick={() => editor.extendMap('right', 640)} disabled={!st.map} title="Add 640px on the right">
+            +640 ⇒
+          </button>
+          <button className="subtle" onClick={() => editor.fitMap()} disabled={!st.map} title="Home">
+            fit
+          </button>
+        </span>
       </div>
     </div>
   );

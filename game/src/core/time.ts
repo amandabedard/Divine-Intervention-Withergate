@@ -2,7 +2,7 @@ import { PHASES, nextPhase } from '@withergate/shared';
 import type { Ctx } from './ctx';
 import { checkQuests } from './quests';
 import { maxEnergy, maxHp, phaseAbs } from './state';
-import { checkResidents, completeBuilds, dailyIncome } from './town';
+import { checkResidents, completeBuilds, dailyIncome, rollStore, weekOf } from './town';
 
 export const PHASE_LABELS: Record<(typeof PHASES)[number], string> = {
   morning: 'Morning',
@@ -51,6 +51,10 @@ export function dailyTick(ctx: Ctx): void {
   completeBuilds(ctx);
   dailyIncome(ctx);
   checkResidents(ctx);
+  if (state.town.store && state.town.store.week !== weekOf(state.time.day)) {
+    rollStore(ctx);
+    state.notices.push('The general store has new stock and new prices this week.');
+  }
   for (const key of Object.keys(state.flags)) {
     if (key.startsWith('bonus_until:') && state.flags[key] !== -1 && Number(state.flags[key]) < state.time.day) {
       const stat = key.slice('bonus_until:'.length);

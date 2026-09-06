@@ -62,6 +62,9 @@ Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 | G2 | Battle loot goes to Withergate's stores until the haul exists. |
 | G3 | Corruption cadence: a full week (5 days) without clearing corruption brings the warning; if a dungeon has not been started within the next 3 days, someone is taken. |
 | — | All five build slots are the same (large) size and sit together east of town; the old fifth spot at the west end is now the **shrine**, where you manage your divinity (unlock and hold powers). |
+| H1 | Starting a corruption dungeon pauses the countdown (that day no longer counts as a day without fighting the corruption), but the clock only resets when the dungeon is finished. Dungeon expeditions are planned from the desk in your quarters. |
+| H2 | Store stock is limited and weighted by who lives in Withergate: each villager profile adds weight to particular items showing up. Prices are always above the base value and change weekly, so the store is never a good deal, only sometimes a less bad one. |
+| H3 | Residents whose workplace is a fixed facility, or who have none, stand at free spots around town, nearer their work when possible; two residents never share a spot. Interiors for the fixed buildings can come later. |
 
 ---
 
@@ -69,12 +72,20 @@ Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 
 **H1. Corruption dungeons.** "Clearing corruption" means finishing a corruption map (a dungeon that takes days). Is starting one enough to reset the warning clock, or only finishing it? Do dungeons appear as expedition checkpoints, or as their own destinations?
 Default: starting one pauses the clock, finishing resets it; they are their own destinations on the expedition map.
-Answer:
+Answer: You have to finish it, but starting one is enough to pause the countdown (the day does not count as a day of corruption, because you have technically fought it). Dungeon expeditions can be planned from your desk. *(Folded into the decision log; built with Phase 7/8.)*
 
 **H2. Store stock.** The general store currently sells every resource plus a few gifts from `economy.yaml`. Should stock be limited per day, or change with the town's industry, from the start?
 Default: unlimited until Phase 8 adds industry.
-Answer:
+Answer: Stock is limited and based on the characters in town, who each add weight to specific items showing up. Things are always more expensive in the store, but the price varies weekly: you never get a good deal, but you can get a slightly less worse one. *(Folded into the decision log and the store; see `docs/content/villager-format.md` → `store` and `docs/content/data-formats.md` → `economy.yaml`.)*
 
 **H3. Fixed-facility workplaces.** Residents whose workplace is a fixed facility (tavern, store) stand outside its door during the day. Good enough, or should the fixed buildings get interiors and spots?
 Default: outside the door for now.
+Answer: They stand at random spaces in town for now, nearer their work when possible; if you hire ten farmers they cannot all stand in the same spot. *(Folded into the schedule rules.)*
+
+## I. Asset packs (2026-09-07)
+
+The first set (seven 768px pixel-art packs: town, gothic, farm, dreamland, rome, steampunk, forest; 5,424 cut pieces) was **removed** the same day on Amanda's decision, together with the twelve placements that used it. The library now holds seven craftpix packs (`assets/README.md`): five cartoon platformer tilesets (`workshop`, `tailor`, `market`, `village`, `farm`; 120 ready-made pieces each: two parallax background layers, modular building parts, props, thirteen 128px ground tiles) and two 16px top-down pixel-art packs (`farm_topdown`, `home_topdown`; objects and tilesets cut with the sheet cutter's `objects` and `grid` modes; animation strips and the water-detail tileset left out). 1,881 pieces in all. The repository stays private because the craftpix licence forbids redistributing the files.
+
+**I1. Top-down art in a side-scroller.** The two top-down packs are drawn from above at 16px, next to 128px cartoon platformer art. Their props (plants, furniture, animals' houses) can pass as decoration at 2x–4x scale; their ground and water tiles will look odd on a side view. Keep them as an option, or drop them to keep the tile tab short?
+Default: keep.
 Answer:

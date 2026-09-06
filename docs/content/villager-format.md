@@ -144,6 +144,7 @@ schedule:
 | `recovery_days` | no | default 5 |
 | `recruit.workplace` | no | facility they work at once recruited; `none` = odd jobs. If they *need* it, also add `not_facility: X` to `leaves_if` |
 | `energy` | yes for recruitables | |
+| `store` | no | `{ food: 4, whetstone: 2 }`: resources or items that show up more often at the general store while they live in Withergate (weight, see `economy.yaml → stock`) |
 | `benefits` | no | see catalogue |
 | `schedule.home` | yes if they have a home town | any phase can be `{ map: none }` |
 | `schedule.withergate` | no | defaults derived from workplace and Living Quarters |

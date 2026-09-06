@@ -1,7 +1,7 @@
 import { mapEntities } from '@withergate/shared';
 import { evaluate } from './conditions';
 import type { Ctx } from './ctx';
-import { phaseAbs, villagerState } from './state';
+import { phaseAbs, residents, villagerState } from './state';
 
 export interface Placement {
   map: string;
@@ -37,31 +37,86 @@ export function whereIs(ctx: Ctx, id: string): Placement | null {
   return resolve(ctx, ref.map, ref.spot);
 }
 
+interface Place {
+  id: string;
+  x: number;
+  y: number;
+  facing: 'left' | 'right';
+}
+
+function hashOf(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
 /**
- * Where a resident without an explicit Withergate schedule stands: at their workplace while
- * it exists (a built slot, or the door of a fixed facility), the square otherwise, the well
- * in the evening, and home at night.
+ * Where residents without an explicit Withergate schedule stand (decided H3):
+ * at a free place near their workplace when they have one (the front of a built
+ * slot, or the door of a fixed facility), at a random free place otherwise,
+ * around the well in the evening, and home at night. No two residents share a
+ * place, and the arrangement changes from day to day. Places are the map's NPC
+ * spots, slot fronts and building doors; the ground near the square catches the
+ * overflow.
  */
-function residentPlacement(ctx: Ctx, id: string): Placement | null {
+function residentPlacements(ctx: Ctx): Map<string, Placement | null> {
   const mapId = 'withergate';
+  const out = new Map<string, Placement | null>();
   const map = ctx.content.maps[mapId];
-  if (!map) return null;
+  if (!map) return out;
+  const ids = residents(ctx.state)
+    .filter((id) => !ctx.content.villagers[id]?.profile.schedule?.withergate)
+    .sort();
   const phase = ctx.state.time.phase;
-  if (phase === 'night') return null;
-  const spots = mapEntities(map, 'npc_spot');
-  const spotByName = (name: string) => spots.find((s) => s.id === name);
-  const at = (s: { id: string; x: number; y: number; facing: 'left' | 'right' } | undefined): Placement | null =>
-    s ? { map: mapId, spot: s.id, facing: s.facing, x: s.x, y: s.y } : null;
-  if (phase === 'evening') return at(spotByName('well') ?? spots[0]);
-  const workplace = ctx.content.villagers[id]?.profile.recruit?.workplace;
-  if (workplace && workplace !== 'none') {
-    const slotId = Object.entries(ctx.state.town.slots).find(([, f]) => f === workplace)?.[0];
-    const slot = slotId ? mapEntities(map, 'facility_slot').find((s) => s.id === slotId) : undefined;
-    if (slot) return { map: mapId, spot: `slot:${slot.id}`, facing: 'left', x: slot.x + 60, y: slot.y };
-    const door = map.entities.find((e) => (e.type === 'interactable' || e.type === 'exit') && e.id.startsWith(workplace));
-    if (door && 'w' in door) return { map: mapId, spot: `door:${door.id}`, facing: 'left', x: door.x + door.w + 50, y: map.ground_y };
+  if (phase === 'night') {
+    for (const id of ids) out.set(id, null);
+    return out;
   }
-  return at(spotByName('square') ?? spots[0]);
+  const places: Place[] = [];
+  for (const s of mapEntities(map, 'npc_spot')) places.push({ id: s.id, x: s.x, y: s.y, facing: s.facing });
+  for (const slot of mapEntities(map, 'facility_slot')) places.push({ id: `slot:${slot.id}`, x: slot.x + 60, y: slot.y, facing: 'left' });
+  for (const e of mapEntities(map, 'interactable')) places.push({ id: `door:${e.id}`, x: e.x + e.w + 50, y: map.ground_y, facing: 'left' });
+  const square = places.find((p) => p.id === 'square') ?? places[0];
+  for (let k = 1; square && places.length < ids.length + 2; k += 1) {
+    places.push({ id: `ground:${k}`, x: square.x + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 90, y: map.ground_y, facing: 'left' });
+  }
+  const free = new Set(places.map((p) => p.id));
+  // residents with a sheet of their own already stand somewhere; keep those places clear
+  for (const id of residents(ctx.state)) {
+    const table = ctx.content.villagers[id]?.profile.schedule?.withergate;
+    const ref = table?.[phase];
+    if (ref && ref.map === mapId && ref.spot) free.delete(ref.spot);
+  }
+  const anchorOf = (id: string): number | null => {
+    const workplace = ctx.content.villagers[id]?.profile.recruit?.workplace;
+    if (!workplace || workplace === 'none') return null;
+    const slotId = Object.entries(ctx.state.town.slots).find(([, f]) => f === workplace)?.[0];
+    if (slotId) return places.find((p) => p.id === `slot:${slotId}`)?.x ?? null;
+    if (ctx.state.town.facilities.includes(workplace)) return places.find((p) => p.id.startsWith(`door:${workplace}`))?.x ?? null;
+    return null;
+  };
+  const wellX = places.find((p) => p.id === 'well')?.x ?? null;
+  // workers first, so the places next to their work are still free
+  const ordered = [...ids].sort((a, b) => Number(anchorOf(a) === null) - Number(anchorOf(b) === null) || a.localeCompare(b));
+  for (const id of ordered) {
+    const open = places.filter((p) => free.has(p.id));
+    if (!open.length) {
+      out.set(id, null);
+      continue;
+    }
+    const anchor = phase === 'evening' ? (wellX ?? anchorOf(id)) : anchorOf(id);
+    const place =
+      anchor === null
+        ? open[hashOf(`${id}:${ctx.state.time.day}`) % open.length]!
+        : open.reduce((best, p) => (Math.abs(p.x - anchor) < Math.abs(best.x - anchor) ? p : best), open[0]!);
+    free.delete(place.id);
+    out.set(id, { map: mapId, spot: place.id, facing: place.facing, x: place.x, y: place.y });
+  }
+  return out;
+}
+
+function residentPlacement(ctx: Ctx, id: string): Placement | null {
+  return residentPlacements(ctx).get(id) ?? null;
 }
 
 function resolve(ctx: Ctx, map: string, spot: string | undefined): Placement | null {

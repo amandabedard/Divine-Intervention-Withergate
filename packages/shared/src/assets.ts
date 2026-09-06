@@ -39,6 +39,15 @@ export const EMPTY_INDEX: GeneratedIndex = { generatedAt: '', sprites: {}, busts
 export const ASSET_KINDS = ['tile', 'prop', 'background', 'ui', 'icon', 'audio'] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 export const IMAGE_ASSET_KINDS: readonly AssetKind[] = ['tile', 'prop', 'background', 'ui', 'icon'];
+/** Folder under assets/ for each kind. */
+export const ASSET_KIND_DIRS: Record<AssetKind, string> = {
+  tile: 'tiles',
+  prop: 'props',
+  background: 'backgrounds',
+  ui: 'ui',
+  icon: 'icons',
+  audio: 'audio',
+};
 
 export const AssetEntrySchema = z.strictObject({
   id: z.string().regex(/^[a-z][a-z0-9_]*$/),
@@ -50,6 +59,12 @@ export const AssetEntrySchema = z.strictObject({
   tags: z.array(z.string()).default([]),
   placeholder: z.boolean().default(false),
   credit: z.string().optional(),
+  /** Asset pack the piece came from (a folder of sheets imported together). */
+  pack: z.string().optional(),
+  /** Pixel art: draw with nearest-neighbour scaling, never smoothed. */
+  pixel: z.boolean().optional(),
+  /** Where on an imported sheet the piece was cut from, so re-importing the sheet finds it again. */
+  source: z.strictObject({ sheet: z.string(), x: z.number().int(), y: z.number().int() }).optional(),
 });
 export type AssetEntry = z.output<typeof AssetEntrySchema>;
 

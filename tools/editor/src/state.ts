@@ -46,7 +46,10 @@ export interface EditorState {
   grid: number;
   snap: boolean;
   zoom: number;
+  /** Screen position of the map's origin, in CSS pixels of the canvas. */
   pan: { x: number; y: number };
+  /** Size of the visible canvas, kept here so fit-to-view can be computed anywhere. */
+  view: { w: number; h: number };
   visible: Visibility;
   history: GameMap[];
   future: GameMap[];
@@ -93,7 +96,8 @@ class EditorStore {
     grid: 32,
     snap: true,
     zoom: 0.5,
-    pan: { x: 20, y: 20 },
+    pan: { x: 40, y: 40 },
+    view: { w: 800, h: 600 },
     visible: { midground: true, ground: true, decor: true, foreground: true, collision: true, entities: true, grid: true, scenery: true },
     history: [],
     future: [],
@@ -148,7 +152,7 @@ class EditorStore {
     if (this.state.dirty && !confirm('Discard unsaved changes?')) return;
     try {
       const map = normalizeMap(await api.getMap(id));
-      this.set({ mapId: id, map, dirty: false, selection: null, history: [], future: [], issues: [], status: `Opened ${id}` });
+      this.set({ mapId: id, map, dirty: false, selection: null, history: [], future: [], issues: [], status: `Opened ${id}`, pan: { x: 40, y: 40 } });
       history.replaceState(null, '', `?map=${id}`);
     } catch (e) {
       this.status(`Could not open ${id}: ${(e as Error).message}`);
@@ -235,6 +239,50 @@ class EditorStore {
       else m.collision.splice(sel.index, 1);
     });
     this.select(null);
+  }
+
+  /** Scroll the view by a screen-pixel offset. */
+  panBy(dx: number, dy: number): void {
+    this.set({ pan: { x: this.state.pan.x - dx, y: this.state.pan.y - dy } });
+  }
+
+  /** Zoom so the whole map is visible. */
+  fitMap(): void {
+    const { map, view } = this.state;
+    if (!map) return;
+    const zoom = Math.min(3, Math.max(0.1, Math.min((view.w - 80) / map.size.width, (view.h - 80) / map.size.height)));
+    this.set({ zoom, pan: { x: Math.round((view.w - map.size.width * zoom) / 2), y: Math.round((view.h - map.size.height * zoom) / 2) } });
+  }
+
+  /** Zoom around a screen point (CSS pixels of the canvas). */
+  zoomAt(zoom: number, sx: number, sy: number): void {
+    const s = this.state;
+    const z = Math.min(3, Math.max(0.1, zoom));
+    const wx = (sx - s.pan.x) / s.zoom;
+    const wy = (sy - s.pan.y) / s.zoom;
+    this.set({ zoom: z, pan: { x: sx - wx * z, y: sy - wy * z } });
+  }
+
+  /**
+   * Make the map bigger. Extending to the left shifts everything on the map
+   * right so nothing moves in the world; the camera and spawns follow.
+   */
+  extendMap(side: 'left' | 'right' | 'bottom', px: number): void {
+    this.updateMap((m) => {
+      if (side === 'bottom') {
+        m.size.height += px;
+        return;
+      }
+      m.size.width += px;
+      if (side !== 'left') return;
+      for (const layer of LAYERS) for (const p of m.layers[layer]) p.x += px;
+      for (const c of m.collision) c.x += px;
+      for (const e of m.entities) {
+        e.x += px;
+        if (e.type === 'camera_bounds') e.w += px;
+      }
+    });
+    if (side === 'left') this.set({ pan: { x: this.state.pan.x - px * this.state.zoom, y: this.state.pan.y } });
   }
 
   nudge(dx: number, dy: number): void {

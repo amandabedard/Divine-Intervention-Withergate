@@ -61,6 +61,7 @@ export const DEFAULT_ECONOMY: Economy = {
   prices: { wood: 3, stone: 4, ore: 6, food: 2, herbs: 3, cloth: 5 },
   sell_rate: 0.5,
   gifts: {},
+  stock: { offers: 5, markup: [1.2, 1.8], units: { default: 10 }, weights: {} },
 };
 
 export const DEFAULT_PROGRESSION: Progression = {

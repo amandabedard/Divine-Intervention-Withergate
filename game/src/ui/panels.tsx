@@ -325,41 +325,74 @@ function LivingQuartersPanel({ snap }: { snap: Snapshot }) {
 
 function StorePanel({ snap }: { snap: Snapshot }) {
   const s = snap.state!;
-  const [view, setView] = useState<Resource | null>(null);
+  type View = { kind: 'offer'; index: number } | { kind: 'sell' } | { kind: 'sell_one'; resource: Resource } | null;
+  const [view, setView] = useState<View>(null);
   const ctx = session.ctx();
+  const nameOf = (item: string) => snap.content.items[item]?.name ?? item;
   const items = useMemo<Item[]>(() => {
-    if (view) {
-      const list: Item[] = [];
-      for (const n of [1, 5, 10]) {
-        const cost = town.buyPrice(ctx, view, n);
-        list.push({ label: `Buy ${n}`, note: `${cost} gold`, disabled: s.town.resources.gold < cost, run: () => session.town.buy(view, n) });
-      }
-      for (const n of [1, 5, 10]) {
-        list.push({ label: `Sell ${n}`, note: `${town.sellPrice(ctx, view, n)} gold`, disabled: s.town.resources[view] < n, run: () => session.town.sell(view, n) });
+    const offers = town.storeOffers(ctx);
+    const gold = s.town.resources.gold;
+    const list: Item[] = [];
+    if (view?.kind === 'offer') {
+      const o = offers[view.index];
+      if (o) {
+        const affordable = Math.floor(gold / o.price);
+        for (const n of [1, 5]) {
+          if (n > 1 && o.qty < n) continue;
+          list.push({ label: `Buy ${n}`, note: `${o.price * n} gold`, disabled: gold < o.price * n || o.qty < n, run: () => session.town.buy(view.index, n) });
+        }
+        const all = Math.min(o.qty, affordable);
+        if (all > 1) list.push({ label: `Buy all ${all}`, note: `${o.price * all} gold`, run: () => session.town.buy(view.index, all) });
       }
       list.push({ label: 'Back', run: () => setView(null) });
       return list;
     }
-    const list: Item[] = [];
-    for (const r of RESOURCES) {
-      if (r === 'gold' || !snap.content.economy.prices[r]) continue;
-      list.push({ label: r, note: `have ${s.town.resources[r]} · buy ${town.buyPrice(ctx, r)} · sell ${town.sellPrice(ctx, r)}`, run: () => setView(r) });
+    if (view?.kind === 'sell_one') {
+      const r = view.resource;
+      for (const n of [1, 5, 10]) {
+        list.push({ label: `Sell ${n}`, note: `${town.sellPrice(ctx, r, n)} gold`, disabled: s.town.resources[r] < n, run: () => session.town.sell(r, n) });
+      }
+      if (s.town.resources[r] > 10) list.push({ label: `Sell all ${s.town.resources[r]}`, note: `${town.sellPrice(ctx, r, s.town.resources[r])} gold`, run: () => session.town.sell(r, s.town.resources[r]) });
+      list.push({ label: 'Back', run: () => setView({ kind: 'sell' }) });
+      return list;
     }
-    for (const id of Object.keys(snap.content.economy.gifts)) {
-      const price = town.giftPrice(ctx, id) ?? 0;
-      list.push({ label: `Buy ${snap.content.items[id]?.name ?? id}`, note: `${price} gold · gift`, disabled: s.town.resources.gold < price, run: () => session.town.buyGift(id) });
+    if (view?.kind === 'sell') {
+      for (const r of RESOURCES) {
+        if (r === 'gold' || !snap.content.economy.prices[r] || !s.town.resources[r]) continue;
+        list.push({ label: r, note: `have ${s.town.resources[r]} · ${town.sellPrice(ctx, r)} gold each`, run: () => setView({ kind: 'sell_one', resource: r }) });
+      }
+      if (!list.length) list.push({ label: '(nothing to sell)', disabled: true, run: () => undefined });
+      list.push({ label: 'Back', run: () => setView(null) });
+      return list;
     }
+    offers.forEach((o, index) => {
+      list.push({
+        label: nameOf(o.item),
+        note: o.qty ? `${o.qty} left · ${o.price} gold each` : 'sold out this week',
+        disabled: !o.qty || gold < o.price,
+        run: () => setView({ kind: 'offer', index }),
+      });
+    });
+    if (!offers.length) list.push({ label: '(empty shelves)', disabled: true, run: () => undefined });
+    list.push({ label: 'Sell…', note: 'the town pays half of what things are worth', run: () => setView({ kind: 'sell' }) });
     list.push({ label: 'Close', run: () => session.closePanel() });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap.version, view]);
+  const week = town.weekOf(s.time.day);
+  const subtitle =
+    view?.kind === 'offer'
+      ? `${s.town.resources.gold} gold. ${nameOf(town.storeOffers(ctx)[view.index]?.item ?? '')}.`
+      : view
+        ? `${s.town.resources.gold} gold. Selling.`
+        : `Week ${week}'s shelves and prices. ${s.town.resources.gold} gold. Nothing here is a bargain; some weeks less so.`;
   return (
     <MenuPanel
       title="General Store"
-      subtitle={`${s.town.resources.gold} gold. ${view ? `Trading ${view}.` : 'Buy with gold, or sell what the town does not need.'}`}
+      subtitle={subtitle}
       items={items}
-      resetKey={view}
-      onCancel={() => (view ? setView(null) : session.closePanel())}
+      resetKey={JSON.stringify(view)}
+      onCancel={() => (view ? setView(view.kind === 'sell_one' ? { kind: 'sell' } : null) : session.closePanel())}
     />
   );
 }

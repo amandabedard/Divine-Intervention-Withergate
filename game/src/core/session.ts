@@ -33,8 +33,7 @@ import { newGame, residents, villagerState } from './state';
 import type { GameState, NewGameOptions } from './state';
 import { advancePhases, sleepUntilMorning } from './time';
 import {
-  buy,
-  buyGift,
+  buyOffer,
   canBuild,
   canUnlockPower,
   craft,
@@ -333,9 +332,8 @@ class Session {
       this.closePanel();
       this.showNotices();
     },
-    buy: (resource: Parameters<typeof buy>[1], n: number): boolean => this.townCall((ctx) => buy(ctx, resource, n)),
+    buy: (offer: number, n: number): boolean => this.townCall((ctx) => buyOffer(ctx, offer, n)),
     sell: (resource: Parameters<typeof sell>[1], n: number): boolean => this.townCall((ctx) => sell(ctx, resource, n)),
-    buyGift: (item: string): boolean => this.townCall((ctx) => buyGift(ctx, item)),
     activity: (id: string): void => {
       const ctx = this.ctx();
       const r = doActivity(ctx, id);

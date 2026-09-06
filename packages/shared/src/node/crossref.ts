@@ -1,6 +1,7 @@
 import type { AssetManifest, GeneratedIndex } from '../assets.ts';
 import type { ContentBundle, Issue } from '../bundle.ts';
 import type { Condition } from '../condition.ts';
+import { RESOURCES } from '../ids.ts';
 import { mapEntities } from '../map.ts';
 import { forEachStep } from '../script.ts';
 import type { Effects, Step } from '../script.ts';
@@ -198,6 +199,9 @@ export function crossCheck(
     };
     checkSchedule(p.schedule?.home, 'home');
     checkSchedule(p.schedule?.withergate, 'withergate');
+    for (const id of Object.keys(p.store ?? {})) {
+      if (!(RESOURCES as readonly string[]).includes(id) && !has.item(id)) err(pf, `store: unknown resource or item "${id}"`);
+    }
     for (const o of p.schedule?.overrides ?? []) {
       checkCondition(o.when, pf);
       if (o.at.map !== 'none') {
@@ -363,6 +367,12 @@ export function crossCheck(
 
   // --- economy and tavern --------------------------------------------------
   for (const id of Object.keys(bundle.economy.gifts)) if (!has.item(id)) err('economy.yaml', `gifts: unknown item "${id}"`);
+  for (const id of Object.keys(bundle.economy.stock.weights)) {
+    if (!(RESOURCES as readonly string[]).includes(id) && !has.item(id)) err('economy.yaml', `stock.weights: unknown resource or item "${id}"`);
+  }
+  for (const id of Object.keys(bundle.economy.stock.units)) {
+    if (id !== 'default' && !(RESOURCES as readonly string[]).includes(id)) err('economy.yaml', `stock.units: unknown resource "${id}"`);
+  }
   for (const a of bundle.tavern) {
     checkCondition(a.requires, 'tavern.yaml');
     checkEffects(a.effects, 'tavern.yaml');
