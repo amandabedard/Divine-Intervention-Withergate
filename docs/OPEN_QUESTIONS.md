@@ -65,6 +65,10 @@ Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 | H1 | Starting a corruption dungeon pauses the countdown (that day no longer counts as a day without fighting the corruption), but the clock only resets when the dungeon is finished. Dungeon expeditions are planned from the desk in your quarters. |
 | H2 | Store stock is limited and weighted by who lives in Withergate: each villager profile adds weight to particular items showing up. Prices are always above the base value and change weekly, so the store is never a good deal, only sometimes a less bad one. |
 | H3 | Residents whose workplace is a fixed facility, or who have none, stand at free spots around town, nearer their work when possible; two residents never share a spot. Interiors for the fixed buildings can come later. |
+| I1 | The top-down packs keep their interior floors and furniture; their outdoor tiles are dropped. |
+| J | The way home is abstract. Companions travelling with you stand nowhere else. Checkpoints are unknown on the map though every node's type is fixed at generation (for a future explorer skill); a checkpoint may be a mini town, a caravan of explorers, a boss, or a rest. Clearing a den only resets the clock. |
+| K | The world is **Duluma**. Anyone unprotected can be taken; a resurrection is planned, so a taken giver's quest greys out instead of failing. Incursions and takings are morning notices, with a purple flash "The corruption has reached Duluma…". The ending is the *return to the heavens*; its conditions are open (K1). |
+| — | The opening (Amanda's script, 2026-09-07): the Duluma prologue before character creation; the fall into the glade; forage; a thief; Aldric and two knights bring the king's proposal (Withergate, the queen taken by the corruption) and lead you there; the tour; the talk at your desk (farmer / doctor / "join me", the last being the only way to make Aldric recruitable); Aldric travels with you as a guest to Aboridge to meet the king. |
 
 ---
 
@@ -80,7 +84,7 @@ Answer: Stock is limited and based on the characters in town, who each add weigh
 
 **H3. Fixed-facility workplaces.** Residents whose workplace is a fixed facility (tavern, store) stand outside its door during the day. Good enough, or should the fixed buildings get interiors and spots?
 Default: outside the door for now.
-Answer: They stand at random spaces in town for now, nearer their work when possible; if you hire ten farmers they cannot all stand in the same spot. *(Folded into the schedule rules.)*
+Answer: Thinking about interiors, not sure yet. For now they stand as near as they can, as assumed. *(Built.)*
 
 ## I. Asset packs (2026-09-07)
 
@@ -88,40 +92,54 @@ The first set (seven 768px pixel-art packs: town, gothic, farm, dreamland, rome,
 
 **I1. Top-down art in a side-scroller.** The two top-down packs are drawn from above at 16px, next to 128px cartoon platformer art. Their props (plants, furniture, animals' houses) can pass as decoration at 2x–4x scale; their ground and water tiles will look odd on a side view. Keep them as an option, or drop them to keep the tile tab short?
 Default: keep.
-Answer:
+Answer: Keep the interior floors and furniture as options, drop the outdoor tiles. *(Done: the outdoor tilesets of `farm_topdown` were removed; 300 interior tiles remain.)*
 
 ## J. Expeditions (2026-09-07, Phase 7 built with these defaults)
 
 **J1. The way home.** "Head home" is abstract: one day per two segments walked, no nodes, and the carried haul faces the end-of-trip risk once. Keep it abstract, or should the return be its own shorter node map (more risk, more gathering)?
 Default: abstract.
-Answer:
+Answer: Keep it abstract.
 
 **J2. Companions in other towns.** Companions who reach Aboridge with you still show up at their usual Withergate spots while you are away (schedules do not know about the road yet). Fine for now, or should they follow you onto town maps?
 Default: fine for now.
-Answer:
+Answer: Once recruited (or travelling with you) they no longer show up at their spot. *(Built: anyone in your party stands nowhere while on the road or in another town; residents already use Withergate's placement.)*
 
 **J3. Settlements and bosses.** `settlement` nodes (a small side-scroller map mid-road) and `boss` nodes are reserved: today a boss is just a checkpoint encounter that starts a battle (see `hollow_den`). Do you want settlements as map-loading nodes, and bosses with their own node type and reward rules?
 Default: content-driven checkpoints only.
-Answer:
+Answer: The checkpoint node is unknown on the map, but every node has its type assigned when the map is generated, to support a future explorer skill that reveals them. A checkpoint could be a mini town, a caravan of explorers, a boss, or just a place to rest. *(Built: checkpoints show as `?` until reached; types are still generated up front; what waits there is the region's checkpoint pool, so those four kinds are encounters to write.)*
 
 **J4. Corruption clearing.** The frontier's `hollow_den` lowers corruption by one and sets `hollow_den_cleared`; the countdown and messenger from G3/H1 arrive with Phase 8. Should clearing a den also protect a named villager (a "who was saved" line), or only reset the clock?
 Default: only the clock.
-Answer:
+Answer: Only reset the clock. The corruption creeps toward town, and someone runs into it and dies. *(Built as is.)*
 
 ## K. Story systems (2026-09-07, Phase 8 built with these defaults)
 
 **K1. Ascension conditions.** `content/ascension.yaml` requires act 3 done, faith level 5 and five residents. Keep, loosen, or add (a romance, a specific facility, corruption below a level)?
 Default: as written.
-Answer:
+Answer: Unclear what ascension is. *(Explained in the summary: it is the ending, the return to the heavens with your title. Renamed in the game to "Return to the heavens"; conditions unchanged until you say otherwise.)*
 
 **K2. Who the corruption takes.** Anyone not living in Withergate and not `protected: true`, met or not, chosen at random. Should unmet characters be safe until you have met them, and should a taken villager's personal quest fail with a line?
 Default: anyone; quests need their own `fail_when`.
-Answer:
+Answer: Anyone can be taken. There will be a way to resurrect characters, so their quests just grey out in the journal. *(Built: quests whose giver was taken are greyed and wait; nothing fails. Resurrection itself is not built yet, see L1.)*
 
 **K3. Spread and incursions.** Corruption rises by one every ten idle days and, from level 6, corrupted things may hit the stores at night unless the Barracks and Warriors hold. Numbers in `progression.yaml → corruption`. Do you want incursions to be scenes (a fight at the gate) rather than a morning notice?
 Default: notices.
-Answer:
+Answer: Just the notice, with a purple flash reading "The corruption has reached Duluma…". The region is named **Duluma**. *(Built: the flash plays the morning someone is taken; text in `progression.yaml → corruption.flash`.)*
 
 **K4. Town relations and the war.** Relations are a matrix set by `relations` effects and read by `relations` conditions; nothing moves them yet. Do you want a `towns.yaml` (name, conflict, starting relations, notice-board lines) so the war can be data, or will it live in quests?
 Default: quests.
+Answer:
+
+## L. After the opening (2026-09-07)
+
+**L1. Resurrection.** You said there will be a way to bring back characters the corruption took. Where and at what cost: the shrine (faith), a Hospital action, a quest per character, or a story beat?
+Default: not built yet; taken characters stay `gone` and their quests wait greyed.
+Answer:
+
+**L2. Aboridge and the king.** The opening ends with Aldric taking you to Aboridge to meet the king and choose from "a couple of candidates" ready to move to Withergate. Aboridge has a placeholder map; the king, the candidates and that conversation need writing. Shall I scaffold the king as a protected character and the candidate choice as a cutscene with placeholder lines, or wait for your script?
+Default: wait.
+Answer:
+
+**L3. Knights in the glade.** The proposal mentions two knights hanging back; they are narration until there is art and a reason to give them names.
+Default: narration.
 Answer:

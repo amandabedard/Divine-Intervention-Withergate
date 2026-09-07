@@ -33,6 +33,7 @@ import {
   EncounterSchema,
   EnemySchema,
   FacilitiesFileSchema,
+  IntroSchema,
   ItemsFileSchema,
   PowersFileSchema,
   ProgressionSchema,
@@ -408,6 +409,8 @@ export async function loadContent(opts: LoadOptions): Promise<LoadResult> {
   }
   const economy = await single('economy.yaml', EconomySchema);
   if (economy) bundle.economy = economy.data;
+  const intro = await single('intro.yaml', IntroSchema);
+  if (intro) bundle.intro = intro.data.pages;
   const ascension = await single('ascension.yaml', AscensionSchema);
   if (ascension) {
     const ctx = mkCtx(ascension.pf, 'narrate');

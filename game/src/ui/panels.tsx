@@ -554,7 +554,7 @@ function ShrinePanel({ snap }: { snap: Snapshot }) {
       }
     }
     const notYet = canAscend(ctx);
-    list.push({ label: 'Ascend', note: notYet ? 'not yet' : 'leave the mortal plane and take your title', disabled: !!notYet, danger: true, run: () => session.ascend() });
+    list.push({ label: 'Return to the heavens', note: notYet ? 'not yet' : 'leave Duluma and take your title', disabled: !!notYet, danger: true, run: () => session.ascend() });
     list.push({ label: 'Close', run: () => session.closePanel() });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -605,10 +605,12 @@ function JournalPanel({ snap }: { snap: Snapshot }) {
       <div className="rows journal">
         {active.map((e) => {
           const { quest, stage, notes } = describe(e);
+          // the giver was taken by the corruption: the quest waits, greyed, until they are brought back
+          const giverGone = quest.giver !== 'none' && !!s.villagers[quest.giver]?.gone;
           return (
-            <div key={e.id} className="kv">
+            <div key={e.id} className={`kv ${giverGone ? 'muted' : ''}`}>
               <b>{quest.title}</b>
-              <small className="muted">{quest.type}</small>
+              <small className="muted">{giverGone ? `${quest.type} · ${snap.content.villagers[quest.giver]?.profile.name ?? quest.giver} was lost to the corruption` : quest.type}</small>
               <div>{stage?.objective ?? quest.summary}</div>
               {notes.map((n, i) => (
                 <div key={i} className="muted small">

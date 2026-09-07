@@ -1,0 +1,21 @@
+# The first fight: a thief who thought a fallen god would be easy pickings.
+id: thief
+name: Thief
+description: "[PLACEHOLDER: Quick hands, a rusty knife, and no idea what just fell out of the sky.]"
+stats: { hp: 16, attack: 4, defense: 1, speed: 6 }
+damage_type: blade
+moves:
+  - { id: stab, name: Stab, weight: 3, power: 1 }
+  - { id: pocket, name: Quick Pocket, weight: 1, power: 0.5 }
+xp: 8
+loot: { gold: 3 }
+tags_on_kill: []
+spare:
+  possible: true
+  check: { stat: charisma, dc: 8 }
+  items: { pine_resin: 1 }
+  tags: [merciful]
+appears: { biomes: [plains, forest], time: [morning, afternoon] }
+tier: regular
+intro:
+  - narrate: "[PLACEHOLDER: The thief squints at you, then at the crater, then at your purse.]"

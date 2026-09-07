@@ -117,8 +117,10 @@ export interface GameState {
   /** Hauls on their way to Withergate. */
   caravans: Caravan[];
   scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
-  /** Companions travelling with you (up to 2). Chosen properly in Phase 7; the debug panel sets it until then. */
+  /** Companions travelling with you (up to 2), chosen in the expedition planner. */
   party: string[];
+  /** Characters who travel with you without living in Withergate (story guests such as Aldric on the first road). */
+  guests: string[];
   /** The fight in progress, or null. Never persisted across a save. */
   battle: BattleState | null;
   /** Messages that arrived overnight (messenger warnings, completed buildings), shown after sleeping. */
@@ -198,6 +200,7 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     caravans: [],
     scheduleOverrides: {},
     party: [],
+    guests: [],
     battle: null,
     notices: [],
     log: [],

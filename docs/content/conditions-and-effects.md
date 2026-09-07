@@ -144,6 +144,7 @@ An effects block is a mapping; every key is optional and all present keys apply 
 | `relations` | `relations: { between: [aboridge, dilsdurf], set: tense }` |
 | `corruption` | `corruption: -1` |
 | `recruit` / `dismiss` | `recruit: mara` |
+| `guest` / `unguest` | `guest: aldric` (travels with you without living in Withergate; preselected in the expedition planner until `unguest`) |
 | `build` | `build: { facility: farm, instant: true }` (story use) |
 | `time` | `time: +1` (advance phases) · `time: morning` (sleep to) |
 | `teleport` | `teleport: { map: withergate, spawn: from_road }` |

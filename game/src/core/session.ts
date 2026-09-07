@@ -143,6 +143,12 @@ class Session {
       case 'town_changed':
         bus.emit('town.changed');
         break;
+      case 'flash':
+        store.updateUi({ flash: { text: r.text, color: r.color } });
+        window.setTimeout(() => {
+          if (store.ui.flash?.text === r.text) store.updateUi({ flash: null });
+        }, 3200);
+        break;
       default:
         break;
     }
@@ -181,7 +187,12 @@ class Session {
     return store.ui;
   }
 
+  /** New Game: the prologue pages first (when content has them), then character creation. */
   startCreation(): void {
+    store.updateUi({ mode: store.content.intro.length ? 'intro' : 'creation' });
+  }
+
+  introDone(): void {
     store.updateUi({ mode: 'creation' });
   }
 
@@ -655,6 +666,14 @@ class Session {
       delete ctx.state.flags.opening_pending;
       this.flush(ctx);
       this.runCutscene('opening');
+      return;
+    }
+    // A cutscene queued for the next map (set with flags: { cutscene_pending: id } before a teleport).
+    const pending = ctx.state.flags.cutscene_pending;
+    if (typeof pending === 'string' && store.content.cutscenes[pending]) {
+      delete ctx.state.flags.cutscene_pending;
+      this.flush(ctx);
+      this.runCutscene(pending);
       return;
     }
     this.flush(ctx);

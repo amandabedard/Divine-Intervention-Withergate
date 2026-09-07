@@ -61,6 +61,9 @@ export interface RawEffects {
   corruption?: number;
   recruit?: string;
   dismiss?: string;
+  /** A character who travels with you without living in Withergate (Aldric on the way to Aboridge). */
+  guest?: string;
+  unguest?: string;
   build?: { facility: FacilityId; instant?: boolean };
   time?: number | Phase;
   teleport?: { map: string; spawn: string };
@@ -121,6 +124,8 @@ export const RawEffectsSchema: z.ZodType<RawEffects> = z.lazy(() =>
     corruption: z.number().optional(),
     recruit: ID.optional(),
     dismiss: ID.optional(),
+    guest: ID.optional(),
+    unguest: ID.optional(),
     build: z.strictObject({ facility: z.enum(FACILITY_IDS), instant: z.boolean().optional() }).optional(),
     time: z.union([z.number().int(), z.enum(PHASES)]).optional(),
     teleport: z.strictObject({ map: ID, spawn: ID }).optional(),

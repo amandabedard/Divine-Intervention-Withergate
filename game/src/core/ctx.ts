@@ -18,7 +18,9 @@ export type CoreRequest =
   | { kind: 'time_changed' }
   | { kind: 'npc_refresh' }
   /** Facilities or slots changed; the world redraws the town. */
-  | { kind: 'town_changed' };
+  | { kind: 'town_changed' }
+  /** A full-screen flash with a line of text (the corruption taking someone). */
+  | { kind: 'flash'; text: string; color: 'purple' };
 
 export interface Ctx {
   state: GameState;

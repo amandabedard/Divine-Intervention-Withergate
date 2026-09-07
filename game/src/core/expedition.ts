@@ -175,7 +175,8 @@ export function routeDaysFor(ctx: Ctx, region: Region): number {
 
 export function partyCandidates(ctx: Ctx): PartyCandidate[] {
   const s = ctx.state;
-  return residents(s).map((id) => {
+  const ids = [...new Set([...s.guests.filter((id) => ctx.content.villagers[id]), ...residents(s)])];
+  return ids.map((id) => {
     const profile = ctx.content.villagers[id]?.profile;
     const v = villagerState(s, ctx.content, id);
     const energyMax = profile?.energy ?? 6;

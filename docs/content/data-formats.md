@@ -223,6 +223,18 @@ Effects the game applies today: `resource_income` (resource, amount per day), `s
 
 ---
 
+## The prologue
+
+`content/intro.yaml` holds the pages shown before character creation (Enter turns the page, Esc skips). No variables are available yet, since there is no character.
+
+```yaml
+pages:
+  - "In the beginning there was nothing…"
+  - "You were thought to be full-blooded…"
+```
+
+---
+
 ## Ascension
 
 `content/ascension.yaml` decides when the shrine lets you ascend and how the ending names you.
