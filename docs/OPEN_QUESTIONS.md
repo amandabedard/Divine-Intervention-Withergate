@@ -69,6 +69,7 @@ Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 | J | The way home is abstract. Companions travelling with you stand nowhere else. Checkpoints are unknown on the map though every node's type is fixed at generation (for a future explorer skill); a checkpoint may be a mini town, a caravan of explorers, a boss, or a rest. Clearing a den only resets the clock. |
 | K | The world is **Duluma**. Anyone unprotected can be taken; a resurrection is planned, so a taken giver's quest greys out instead of failing. Incursions and takings are morning notices, with a purple flash "The corruption has reached Duluma…". The ending is the *return to the heavens*; its conditions are open (K1). |
 | — | The opening (Amanda's script, 2026-09-07): the Duluma prologue before character creation; the fall into the glade; forage; a thief; Aldric and two knights bring the king's proposal (Withergate, the queen taken by the corruption) and lead you there; the tour; the talk at your desk (farmer / doctor / "join me", the last being the only way to make Aldric recruitable); Aldric travels with you as a guest to Aboridge to meet the king. |
+| L1 | Resurrection is a late-game mechanic driven by a character who does not exist yet. Until then, taken characters stay gone and their quests wait greyed in the journal. |
 
 ---
 
@@ -134,7 +135,7 @@ Answer:
 
 **L1. Resurrection.** You said there will be a way to bring back characters the corruption took. Where and at what cost: the shrine (faith), a Hospital action, a quest per character, or a story beat?
 Default: not built yet; taken characters stay `gone` and their quests wait greyed.
-Answer:
+Answer: It's a late-game mechanic driven by a character that doesn't exist yet. *(So nothing to build now: taken characters stay gone and their quests wait greyed until that character and their mechanic are written.)*
 
 **L2. Aboridge and the king.** The opening ends with Aldric taking you to Aboridge to meet the king and choose from "a couple of candidates" ready to move to Withergate. Aboridge has a placeholder map; the king, the candidates and that conversation need writing. Shall I scaffold the king as a protected character and the candidate choice as a cutscene with placeholder lines, or wait for your script?
 Default: wait.
