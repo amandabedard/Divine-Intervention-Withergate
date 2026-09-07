@@ -1,0 +1,22 @@
+# PLACEHOLDER topics; Amanda's replace these.
+topics:
+  - id: the_prison
+    label: "Ask about the prison"
+    marker: heart
+    script:
+      - jasper: "[PLACEHOLDER: I was in for something I did. That's all you get until I know you better.]"
+      - choice:
+          - text: "Fair enough."
+            effects: { friendship: 3 }
+            then:
+              - jasper: "[PLACEHOLDER: ...Huh. Most people push.]"
+          - text: "What did you do?"
+            effects: { friendship: -2 }
+            then:
+              - jasper(angry): "[PLACEHOLDER: I said until I know you better.]"
+
+  - id: the_mines
+    label: "Ask about the mines"
+    script:
+      - jasper: "[PLACEHOLDER: Ore comes out of the dark and the dark stays down there. Good arrangement.]"
+      - jasper: "[PLACEHOLDER: Give me a hill and a season and I'll tell you what's under it.]"

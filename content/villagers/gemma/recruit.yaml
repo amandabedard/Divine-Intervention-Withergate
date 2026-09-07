@@ -1,0 +1,8 @@
+# The king vouches for her, so this is the tutorial recruitment: no roll, she simply agrees.
+topic_label: "Come to Withergate"
+script:
+  - gemma(happy): "[PLACEHOLDER: Yes! I mean, I'd have to think about it. I've thought about it. Yes. I'll start walking and see you there.]"
+unhappy:
+  - lines: [ gemma(sad): "[PLACEHOLDER: This isn't working, and I don't say that about many things.]" ]
+farewell:
+  - gemma: "[PLACEHOLDER: I'm going back to Aboridge. The trees there are sad but at least they're tall.]"

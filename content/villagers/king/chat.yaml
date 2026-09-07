@@ -1,0 +1,9 @@
+# PLACEHOLDER chat for the king; Amanda's lines replace these.
+pools:
+  - when: { not_flags: [king_thanks] }
+    lines:
+      - "[PLACEHOLDER: Talk with them. Take your time; I have a little of it left.]"
+  - when: { flags: [king_thanks] }
+    lines:
+      - "[PLACEHOLDER: How fares Withergate? Send word when there is word to send.]"
+      - "[PLACEHOLDER: The corruption does not wait on ceremony. Neither should you.]"

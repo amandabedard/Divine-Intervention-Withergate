@@ -1,0 +1,20 @@
+# The King of Aboridge. Amanda has not named him yet (M1): "The King" is the display name until she does.
+# Protected: the corruption never takes him. He only ever stands at his throne.
+id: king
+name: The King
+pronouns: he/him
+profession: none
+home_town: aboridge
+romanceable: false
+protected: true
+bio: "[PLACEHOLDER: The King of Aboridge. Widowed by the corruption a few days before you fell, and short on options.]"
+personality: [measured, tired, courteous]
+likes: []
+dislikes: []
+gifts: {}
+schedule:
+  home:
+    morning: { map: aboridge_castle, spot: throne }
+    afternoon: { map: aboridge_castle, spot: throne }
+    evening: { map: aboridge_castle, spot: throne }
+    night: { map: none }

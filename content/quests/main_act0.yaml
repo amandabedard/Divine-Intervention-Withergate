@@ -1,4 +1,4 @@
-# Act 0: the fall. Started by the opening cutscene on the landing glade.
+# Act 0: the fall. Started by the opening cutscene on the landing glade; ends in Aboridge's throne room.
 id: main_act0
 title: "The Fall"
 type: main
@@ -23,7 +23,20 @@ stages:
   - id: aboridge
     objective: "Travel to Aboridge with Aldric and meet the king."
     complete_when: { map: aboridge }
+  - id: castle
+    objective: "Walk up through Aboridge to the castle."
+    complete_when: { flags: [king_audience] }
+  - id: choose
+    objective: "Get to know Jasper and Gemma, then recruit one of them."
+    complete_when: { residents_min: 1 }
+    # The king's word follows as soon as the conversation closes.
+    on_complete: { start_cutscene: the_kings_thanks }
+  - id: thanks
+    objective: "Hear the king out."
+    complete_when: { flags: [king_thanks] }
 rewards: { faith: 5, xp: 20, quest_start: main_act1 }
 journal_notes:
   arrive: "[PLACEHOLDER: Withergate. Four buildings and a great deal of horizon.]"
   aboridge: "[PLACEHOLDER: Two days east. Aldric says the king does not like to be kept waiting.]"
+  castle: "[PLACEHOLDER: Lower Aboridge keeps the poor in; Upper Aboridge keeps everyone else out. The castle sits above both.]"
+  choose: "[PLACEHOLDER: The king can spare one of them. Jasper, out of his prison and into his mines; Gemma, in from the country with an axe.]"

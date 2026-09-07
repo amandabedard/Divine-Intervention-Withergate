@@ -70,6 +70,7 @@ Groups A–G were answered on 2026-09-06 and 2026-09-07 and are kept below as th
 | K | The world is **Duluma**. Anyone unprotected can be taken; a resurrection is planned, so a taken giver's quest greys out instead of failing. Incursions and takings are morning notices, with a purple flash "The corruption has reached Duluma…". The ending is the *return to the heavens*; its conditions are open (K1). |
 | — | The opening (Amanda's script, 2026-09-07): the Duluma prologue before character creation; the fall into the glade; forage; a thief; Aldric and two knights bring the king's proposal (Withergate, the queen taken by the corruption) and lead you there; the tour; the talk at your desk (farmer / doctor / "join me", the last being the only way to make Aldric recruitable); Aldric travels with you as a guest to Aboridge to meet the king. |
 | L1 | Resurrection is a late-game mechanic driven by a character who does not exist yet. Until then, taken characters stay gone and their quests wait greyed in the journal. |
+| L2 | Aboridge is Lower Aboridge, Upper Aboridge and the throne room. The audience (Aldric dismissed to the barracks; Jasper and Gemma presented) opens their recruitment; recruiting one of them ends act 0 with the king's thanks and his word on how dialog works. |
 
 ---
 
@@ -139,8 +140,32 @@ Answer: It's a late-game mechanic driven by a character that doesn't exist yet. 
 
 **L2. Aboridge and the king.** The opening ends with Aldric taking you to Aboridge to meet the king and choose from "a couple of candidates" ready to move to Withergate. Aboridge has a placeholder map; the king, the candidates and that conversation need writing. Shall I scaffold the king as a protected character and the candidate choice as a cutscene with placeholder lines, or wait for your script?
 Default: wait.
-Answer:
+Answer: Once you reach Aboridge you walk through Lower Aboridge and Upper Aboridge until you reach the castle. Aldric escorts you to the king, who is waiting with Jasper (a former prisoner turned miner) and Gemma (a country girl logger). He sends Aldric back to the barracks and tells you to chat with the two and get to know them, and once you have made a choice, to discuss recruitment with them (teaching you how to recruit). After you have chosen someone he gives a loose explanation of how dialog works, thanks you for your service and hopes this is the start of a prosperous relationship between the settlements. *(Built with placeholder lines: three Aboridge maps, the king, Jasper and Gemma, the audience event, the tutorial recruitment and the king's thanks; see M below for what I had to assume.)*
 
 **L3. Knights in the glade.** The proposal mentions two knights hanging back; they are narration until there is art and a reason to give them names.
 Default: narration.
+Answer:
+
+## M. Aboridge (2026-09-07)
+
+Built from your L2 script; these are the gaps I filled, all easy to change.
+
+**M1. The king's name.** He is `king`, shown as "The King", until you name him.
+Default: "The King".
+Answer:
+
+**M2. The recruit goes on ahead.** Whoever you recruit says they will go ahead and is in Withergate when you get back, rather than walking home with you. (Aldric does not walk beside you either; party members are not drawn following you yet.)
+Default: they go ahead.
+Answer:
+
+**M3. The other candidate.** The one you did not pick stays in Lower Aboridge (Jasper by the mine office, Gemma by the lumber yard) and can be recruited later once you are acquaintances, like anyone else.
+Default: as described.
+Answer:
+
+**M4. Aldric's home.** After the audience he stands by the barracks in Upper Aboridge by day and in the lower town square in the evening; recruiting him later means a trip to Aboridge.
+Default: as described.
+Answer:
+
+**M5. The maps.** Lower Aboridge, Upper Aboridge and the throne room are placeholders for you to rebuild in the editor. The spot ids the scenes use are the contract: lower `gate square well lumber_yard mine_gate` and spawns `from_road from_upper`; upper `barracks_door manor_steps chapel_door castle_steps` and spawns `from_lower from_castle`; castle `door hall_door escort throne_steps candidate_left candidate_right throne` and spawn `from_door`.
+Default: keep the ids, move them wherever you like.
 Answer:

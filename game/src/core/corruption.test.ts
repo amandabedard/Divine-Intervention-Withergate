@@ -43,7 +43,7 @@ describe('the corruption clock', () => {
     const state = start();
     const ctx = mk(state);
     const cfg = content.progression.corruption;
-    expect(claimable(ctx)).toEqual(['aldric', 'wren']); // the messenger is protected
+    expect(claimable(ctx)).toEqual(['aldric', 'gemma', 'jasper', 'wren']); // the messenger and the king are protected
     sleep(ctx, cfg.warning_days);
     expect(idleDays(state)).toBe(cfg.warning_days);
     expect(state.world.clock.warnedDay).toBe(state.time.day);
@@ -66,7 +66,7 @@ describe('the corruption clock', () => {
     const ctx = mk(state);
     villagerState(state, content, 'aldric').friendship = 20;
     recruit(ctx, 'aldric');
-    expect(claimable(ctx)).toEqual(['wren']);
+    expect(claimable(ctx)).toEqual(['gemma', 'jasper', 'wren']);
     sleep(ctx, 5);
     expect(state.world.clock.warnedDay).not.toBeNull();
     // setting out onto the frontier within the grace period: nobody is taken while it lasts

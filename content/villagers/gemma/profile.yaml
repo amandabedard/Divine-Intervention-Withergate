@@ -1,0 +1,42 @@
+# One of the king's two candidates for Withergate: a country girl logger (Amanda's L2).
+# Everything below the name is a placeholder for Amanda's sheet.
+id: gemma
+name: Gemma
+pronouns: she/her
+profession: logger
+home_town: aboridge
+romanceable: false
+bio: "[PLACEHOLDER: Gemma grew up felling trees in the country and came to Aboridge because the city needed beams. She talks to trees. They never answer, which she takes as agreement.]"
+personality: [cheerful, blunt, tireless]
+likes: [rain, sawdust, big breakfasts]
+dislikes: [crowds, waste]
+gifts:
+  liked: [hearty_stew, whetstone]
+  disliked: [perfume]
+
+recruit:
+  # The king vouches for her, so the topic opens with the audience and she simply agrees (the tutorial
+  # recruitment). If you choose Jasper instead she stays in Aboridge and needs the usual friendship (M3).
+  requires: { flags: [king_audience], any: [{ not_flags: [king_thanks] }, { tier: acquaintance+ }] }
+  method: { kind: ask }
+  workplace: none
+
+energy: 7
+
+# While she lives in Withergate, wood shows up at the general store more often.
+store: { wood: 3 }
+
+benefits:
+  town:
+    - { type: resource_income, resource: wood, amount: 2 }
+
+schedule:
+  overrides:
+    # Waiting on the king's pleasure until you have made your choice.
+    - when: { not_flags: [king_thanks] }
+      at: { map: aboridge_castle, spot: candidate_right }
+  home:
+    morning: { map: aboridge, spot: lumber_yard }
+    afternoon: { map: aboridge, spot: lumber_yard }
+    evening: { map: aboridge, spot: well }
+    night: { map: none }

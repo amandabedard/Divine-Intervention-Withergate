@@ -377,7 +377,7 @@ Party members can speak in encounters with `- party: mara` lines; the line is sk
 
 ## Cutscenes
 
-`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter: { start_cutscene: id }`), an effect, or the story engine (the opening).
+`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter` or `on_complete: { start_cutscene: id }`; the scene waits until the current conversation closes), an effect, or the story engine (the opening).
 
 ```yaml
 id: the_messenger

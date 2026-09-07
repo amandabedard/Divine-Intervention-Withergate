@@ -288,7 +288,7 @@ script:
 | Step | Form |
 |---|---|
 | place | `- place: { who: mara, at: spot_id }` |
-| move | `- move: { who: mara, to: spot_id, speed: walk, wait: true }` |
+| move | `- move: { who: mara, to: spot_id, speed: walk, wait: true }` — with `wait: true` the script waits for the walk (Enter cannot skip it) |
 | face | `- face: { who: mara, dir: left }` or `{ who: mara, toward: player }` |
 | emote | `- emote: { who: mara, icon: "!" }` icons: `!`, `?`, `heart`, `anger`, `sweat`, `note`, `zzz` |
 | anim | `- anim: { who: mara, play: sit }` |

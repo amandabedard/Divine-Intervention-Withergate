@@ -1,0 +1,39 @@
+{
+  "id": "aboridge_upper",
+  "version": 1,
+  "name": "Upper Aboridge",
+  "town": "aboridge",
+  "size": { "width": 2560, "height": 720 },
+  "ground_y": 620,
+  "background": [
+    { "color": "#7c86a6", "parallax": 0.2, "silhouette": true, "y": 300 },
+    { "color": "#8a7f70", "parallax": 0.45, "silhouette": true, "y": 450 }
+  ],
+  "layers": {
+    "midground": [
+      { "asset": "placeholder", "x": 420, "y": 320, "w": 320, "h": 300, "color": "#5a5a6a", "label": "Barracks\n[PLACEHOLDER]" },
+      { "asset": "placeholder", "x": 1000, "y": 300, "w": 300, "h": 320, "color": "#6a5a5a", "label": "Manor\n[PLACEHOLDER]" },
+      { "asset": "placeholder", "x": 1560, "y": 280, "w": 240, "h": 340, "color": "#6a6a7a", "label": "Chapel\n[PLACEHOLDER]" },
+      { "asset": "placeholder", "x": 2200, "y": 200, "w": 360, "h": 420, "color": "#4a4a5a", "label": "The castle\n[PLACEHOLDER]" }
+    ],
+    "ground": [],
+    "decor": [],
+    "foreground": []
+  },
+  "collision": [],
+  "entities": [
+    { "type": "spawn", "id": "from_lower", "x": 200, "y": 620, "facing": "right" },
+    { "type": "spawn", "id": "from_castle", "x": 2260, "y": 620, "facing": "left" },
+    { "type": "exit", "id": "to_lower", "x": 0, "y": 420, "w": 60, "h": 200, "direction": "left", "to": { "map": "aboridge", "spawn": "from_upper" }, "label": "Lower Aboridge" },
+    { "type": "exit", "id": "castle_door", "x": 2320, "y": 400, "w": 90, "h": 220, "direction": "door", "to": { "map": "aboridge_castle", "spawn": "from_door" }, "auto": false, "label": "The castle" },
+    { "type": "npc_spot", "id": "barracks_door", "x": 600, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "manor_steps", "x": 1150, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "chapel_door", "x": 1680, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "castle_steps", "x": 2160, "y": 620, "facing": "right" }
+  ],
+  "ambience": {
+    "sky": { "top": "#93a9c9", "bottom": "#e3d6c2" },
+    "ground_color": "#7a7060",
+    "tint": { "evening": "#ffb070", "night": "#1a2a5a" }
+  }
+}

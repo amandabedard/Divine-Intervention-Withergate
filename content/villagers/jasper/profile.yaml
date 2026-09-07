@@ -1,0 +1,42 @@
+# One of the king's two candidates for Withergate: a former prisoner turned miner (Amanda's L2).
+# Everything below the name is a placeholder for Amanda's sheet.
+id: jasper
+name: Jasper
+pronouns: he/him
+profession: miner
+home_town: aboridge
+romanceable: false
+bio: "[PLACEHOLDER: Jasper did his time in the king's prison and came out swinging a pick. He would rather not talk about the before.]"
+personality: [guarded, wry, hard-working]
+likes: [quiet, fair pay, strong drink]
+dislikes: [locks, questions about the past]
+gifts:
+  liked: [hearty_stew]
+  disliked: [gilded_ring]
+
+recruit:
+  # The king vouches for him, so the topic opens with the audience and he simply agrees (the tutorial
+  # recruitment). If you choose Gemma instead he stays in Aboridge and needs the usual friendship (M3).
+  requires: { flags: [king_audience], any: [{ not_flags: [king_thanks] }, { tier: acquaintance+ }] }
+  method: { kind: ask }
+  workplace: none
+
+energy: 6
+
+# While he lives in Withergate, ore shows up at the general store more often.
+store: { ore: 3 }
+
+benefits:
+  town:
+    - { type: resource_income, resource: ore, amount: 2 }
+
+schedule:
+  overrides:
+    # Waiting on the king's pleasure until you have made your choice.
+    - when: { not_flags: [king_thanks] }
+      at: { map: aboridge_castle, spot: candidate_left }
+  home:
+    morning: { map: aboridge, spot: mine_gate }
+    afternoon: { map: aboridge, spot: mine_gate }
+    evening: { map: aboridge, spot: square }
+    night: { map: none }
