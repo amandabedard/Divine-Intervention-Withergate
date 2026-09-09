@@ -59,6 +59,7 @@ export function deleteSlot(slot: number): void {
 function migrate(state: GameState): GameState {
   // Future save-format migrations go here, keyed on state.version.
   state.party ??= [];
+  state.guests ??= [];
   state.battle = null;
   state.notices ??= [];
   state.player.weapons ??= state.player.weaponId ? [state.player.weaponId] : [];

@@ -1,0 +1,8 @@
+# The king vouches for him, so this is the tutorial recruitment: no roll, he simply agrees.
+topic_label: "Come to Withergate"
+script:
+  - jasper: "[PLACEHOLDER: You're asking me? ...Yes. A pick, a hill and nobody who knows my face. I'll go on ahead and find the hill.]"
+unhappy:
+  - lines: [ jasper(sad): "[PLACEHOLDER: This isn't what I was promised.]" ]
+farewell:
+  - jasper: "[PLACEHOLDER: I'm going back to the dark. At least it's honest.]"

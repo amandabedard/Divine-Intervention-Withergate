@@ -223,6 +223,18 @@ Effects the game applies today: `resource_income` (resource, amount per day), `s
 
 ---
 
+## The prologue
+
+`content/intro.yaml` holds the pages shown before character creation (Enter turns the page, Esc skips). No variables are available yet, since there is no character.
+
+```yaml
+pages:
+  - "In the beginning there was nothing…"
+  - "You were thought to be full-blooded…"
+```
+
+---
+
 ## Ascension
 
 `content/ascension.yaml` decides when the shrine lets you ascend and how the ending names you.
@@ -365,7 +377,7 @@ Party members can speak in encounters with `- party: mara` lines; the line is sk
 
 ## Cutscenes
 
-`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter: { start_cutscene: id }`), an effect, or the story engine (the opening).
+`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter` or `on_complete: { start_cutscene: id }`; the scene waits until the current conversation closes), an effect, or the story engine (the opening).
 
 ```yaml
 id: the_messenger

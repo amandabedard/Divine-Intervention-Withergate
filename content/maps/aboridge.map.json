@@ -1,7 +1,7 @@
 {
   "id": "aboridge",
   "version": 1,
-  "name": "Aboridge",
+  "name": "Lower Aboridge",
   "town": "aboridge",
   "size": { "width": 2560, "height": 720 },
   "ground_y": 620,
@@ -13,8 +13,9 @@
     "midground": [
       { "asset": "placeholder", "x": 380, "y": 320, "w": 260, "h": 300, "color": "#6d5a4a", "label": "Gatehouse\n[PLACEHOLDER]" },
       { "asset": "placeholder", "x": 900, "y": 360, "w": 320, "h": 260, "color": "#7a6a5a", "label": "Market hall\n[PLACEHOLDER]" },
-      { "asset": "placeholder", "x": 1500, "y": 380, "w": 240, "h": 240, "color": "#5a6a7a", "label": "Aldric's family\n[PLACEHOLDER]" },
-      { "asset": "placeholder", "x": 2000, "y": 340, "w": 300, "h": 280, "color": "#6a5a6a", "label": "Lord's house\n[PLACEHOLDER]" }
+      { "asset": "placeholder", "x": 1500, "y": 420, "w": 300, "h": 200, "color": "#5a6a4a", "label": "Lumber yard\n[PLACEHOLDER]" },
+      { "asset": "placeholder", "x": 1980, "y": 380, "w": 260, "h": 240, "color": "#5a5a6a", "label": "Mine office\n[PLACEHOLDER]" },
+      { "asset": "placeholder", "x": 2380, "y": 300, "w": 180, "h": 320, "color": "#6a5a6a", "label": "Stairs to\nUpper Aboridge\n[PLACEHOLDER]" }
     ],
     "ground": [],
     "decor": [],
@@ -24,11 +25,15 @@
   "entities": [
     { "type": "spawn", "id": "from_road", "x": 200, "y": 620, "facing": "right" },
     { "type": "spawn", "id": "default", "x": 1000, "y": 620, "facing": "left" },
+    { "type": "spawn", "id": "from_upper", "x": 2380, "y": 620, "facing": "left" },
     { "type": "interactable", "id": "road_home", "x": 40, "y": 420, "w": 90, "h": 200, "label": "The road west", "action": { "kind": "expedition" } },
     { "type": "interactable", "id": "notice_aboridge", "x": 1240, "y": 500, "w": 70, "h": 120, "label": "Notices", "action": { "kind": "sign", "text": "[PLACEHOLDER: Aboridge's notice board. Rumours of the war and the frontier.]" } },
+    { "type": "exit", "id": "to_upper", "x": 2500, "y": 420, "w": 60, "h": 200, "direction": "right", "to": { "map": "aboridge_upper", "spawn": "from_lower" }, "label": "Upper Aboridge" },
     { "type": "npc_spot", "id": "gate", "x": 520, "y": 620, "facing": "right" },
     { "type": "npc_spot", "id": "square", "x": 1100, "y": 620, "facing": "left" },
-    { "type": "npc_spot", "id": "well", "x": 1800, "y": 620, "facing": "left" }
+    { "type": "npc_spot", "id": "lumber_yard", "x": 1620, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "well", "x": 1800, "y": 620, "facing": "left" },
+    { "type": "npc_spot", "id": "mine_gate", "x": 2120, "y": 620, "facing": "left" }
   ],
   "ambience": {
     "sky": { "top": "#9cb4d6", "bottom": "#e9dcc4" },

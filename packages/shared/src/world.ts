@@ -348,6 +348,7 @@ export const DEFAULT_CORRUPTION_RULES = {
   cleared: 'The frontier breathes easier. The corruption has been pushed back, for now.',
   incursion_repelled: 'Corrupted things came at the walls in the night. The militia turned them back.',
   incursion_hit: 'Corrupted things came at the walls in the night and got into the stores: {lost}.',
+  flash: 'The corruption has reached Duluma…',
 };
 
 export const CorruptionRulesSchema = z.strictObject({
@@ -365,6 +366,8 @@ export const CorruptionRulesSchema = z.strictObject({
   cleared: z.string().default(DEFAULT_CORRUPTION_RULES.cleared),
   incursion_repelled: z.string().default(DEFAULT_CORRUPTION_RULES.incursion_repelled),
   incursion_hit: z.string().default(DEFAULT_CORRUPTION_RULES.incursion_hit),
+  /** Flashed across the screen the morning someone is taken. */
+  flash: z.string().default(DEFAULT_CORRUPTION_RULES.flash),
 });
 export type CorruptionRules = z.output<typeof CorruptionRulesSchema>;
 
@@ -412,6 +415,11 @@ export const ProgressionSchema = z.strictObject({
   corruption: CorruptionRulesSchema.default(DEFAULT_CORRUPTION_RULES),
 });
 export type Progression = z.output<typeof ProgressionSchema>;
+
+// Intro (content/intro.yaml) ---------------------------------------------------------
+
+/** Pages of text shown before character creation. {name} is not available yet. */
+export const IntroSchema = z.strictObject({ pages: z.array(z.string().min(1)).min(1) });
 
 // Ascension (content/ascension.yaml) --------------------------------------------
 

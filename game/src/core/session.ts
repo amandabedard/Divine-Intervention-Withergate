@@ -81,6 +81,10 @@ class Session {
   private interp: Interpreter | null = null;
   private onDone: ((mode: DoneMode) => void) | null = null;
   private queued: (() => void)[] = [];
+  /** True while a finished script's owner decides what comes next (a follow-up script, the menu, the world). */
+  private settling = false;
+  /** True while the world scene is still performing a stage direction the script waits on (a walk, a fade). */
+  private stageWaiting = false;
   /** The ctx the running script shares, so effects and the requests they queue reach one place. */
   private dialogCtx: Ctx | null = null;
   // battle bookkeeping
@@ -107,9 +111,14 @@ class Session {
   }
 
   private flush(ctx: Ctx): void {
-    const requests = ctx.requests.splice(0);
-    for (const r of requests) this.handleRequest(r);
-    checkQuests(ctx);
+    // A quest stage may complete on the state just changed, and its effects may in turn ask for a
+    // scene or a refresh, so requests are drained again after the quest check.
+    for (let pass = 0; pass < 3; pass += 1) {
+      const requests = ctx.requests.splice(0);
+      for (const r of requests) this.handleRequest(r);
+      checkQuests(ctx);
+      if (!ctx.requests.length) break;
+    }
     store.commit();
   }
 
@@ -143,6 +152,12 @@ class Session {
       case 'town_changed':
         bus.emit('town.changed');
         break;
+      case 'flash':
+        store.updateUi({ flash: { text: r.text, color: r.color } });
+        window.setTimeout(() => {
+          if (store.ui.flash?.text === r.text) store.updateUi({ flash: null });
+        }, 3200);
+        break;
       default:
         break;
     }
@@ -150,7 +165,7 @@ class Session {
 
   /** Run now if no dialog is active, otherwise after the current one finishes. */
   private after(fn: () => void): void {
-    if (this.interp) this.queued.push(fn);
+    if (this.interp || this.settling) this.queued.push(fn);
     else fn();
   }
 
@@ -181,7 +196,12 @@ class Session {
     return store.ui;
   }
 
+  /** New Game: the prologue pages first (when content has them), then character creation. */
   startCreation(): void {
+    store.updateUi({ mode: store.content.intro.length ? 'intro' : 'creation' });
+  }
+
+  introDone(): void {
     store.updateUi({ mode: 'creation' });
   }
 
@@ -232,6 +252,7 @@ class Session {
     this.interp = null;
     this.onDone = null;
     this.dialogCtx = null;
+    this.stageWaiting = false;
     this.queued = [];
     this.resetBattle();
     store.setState(state);
@@ -657,6 +678,14 @@ class Session {
       this.runCutscene('opening');
       return;
     }
+    // A cutscene queued for the next map (set with flags: { cutscene_pending: id } before a teleport).
+    const pending = ctx.state.flags.cutscene_pending;
+    if (typeof pending === 'string' && store.content.cutscenes[pending]) {
+      delete ctx.state.flags.cutscene_pending;
+      this.flush(ctx);
+      this.runCutscene(pending);
+      return;
+    }
     this.flush(ctx);
     if (store.ui.mode !== 'world') return;
     const candidates: HeartEvent[] = [];
@@ -743,6 +772,7 @@ class Session {
     this.interp = null;
     this.onDone = null;
     this.dialogCtx = null;
+    this.stageWaiting = false;
     store.updateUi({ mode: 'world', talk: null, line: null, choices: null, roll: null, dialogActive: false });
     this.drainQueue();
   }
@@ -865,7 +895,10 @@ class Session {
         text = `${name} agrees to move to Withergate.`;
       }
       this.flush(ctx);
-      return [{ kind: 'line', speaker: 'narrate', text }];
+      // Someone who just agreed to move has packing to do: the talk closes, and a scene a quest
+      // queued on the recruitment (the king's word in the opening) can play.
+      const line: Step = { kind: 'line', speaker: 'narrate', text };
+      return ok ? [line, { kind: 'end', mode: 'close' }] : [line];
     };
     this.runScript(script, `recruit:${id}`, id, () => {
       this.runSteps(outcome(), `recruit_outcome:${id}`, id, (mode) => (mode === 'close' ? this.exitTalk() : this.showMenu()));
@@ -1089,6 +1122,7 @@ class Session {
     if (extras) ctx.extras = extras;
     this.dialogCtx = ctx;
     this.interp = new Interpreter(ctx, script, id);
+    this.stageWaiting = false;
     this.onDone = onDone ?? (() => this.setWorld());
     store.updateUi({ mode: 'dialog', line: null, choices: null, roll: null });
     this.pump(ctx);
@@ -1122,9 +1156,13 @@ class Session {
       case 'stage': {
         const step: StageStep = o.step;
         let advanced = false;
+        // Until the scene reports the direction done, Enter must not advance the script: skipping a
+        // walk lets later effects (a refresh, a teleport) act on an actor still in motion.
+        this.stageWaiting = true;
         const done = () => {
           if (advanced || this.interp !== interp) return;
           advanced = true;
+          this.stageWaiting = false;
           this.pump(ctx);
         };
         bus.emit('stage', { step, done });
@@ -1144,10 +1182,17 @@ class Session {
         const cb = this.onDone;
         this.onDone = null;
         // Let the finished script's owner settle the UI first (back to the menu or the
-        // world), then flush requests such as start_cutscene so a follow-up scene is not
-        // immediately overwritten by that owner.
-        cb?.(o.mode);
-        this.flush(ctx);
+        // world, or on to a follow-up script), then flush requests such as start_cutscene so
+        // a scene asked for meanwhile is not immediately overwritten by that owner: while
+        // settling, anything asked for is queued and plays once nothing else is running.
+        this.settling = true;
+        try {
+          cb?.(o.mode);
+          this.flush(ctx);
+        } finally {
+          this.settling = false;
+        }
+        if (!this.interp) this.drainQueue();
         return;
       }
       default:
@@ -1157,7 +1202,7 @@ class Session {
   }
 
   advanceDialog(): void {
-    if (!this.interp || !this.dialogCtx) return;
+    if (!this.interp || !this.dialogCtx || this.stageWaiting) return;
     if (store.ui.choices) return;
     if (store.ui.roll) store.updateUi({ roll: null });
     this.pump(this.dialogCtx);

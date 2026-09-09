@@ -1,0 +1,44 @@
+# Aldric and two knights arrive after the first fight with the king's proposal, and take you to Withergate.
+# Amanda's dialogue, lightly polished. Friendship effects are hers.
+id: the_proposal
+stage:
+  map: landing_glade
+  place: { player: fight_spot, aldric: path_east }
+script:
+  - narrate: "[PLACEHOLDER: Riders on the road. Two knights in Aboridge livery rein in at the edge of the glade; the third swings down and comes on alone.]"
+  - move: { who: aldric, to: glade_center_right, speed: walk, wait: true }
+  - face: { who: player, toward: aldric }
+  - aldric: "You wouldn't happen to be the fallen deity, {name}, would you? Looks like you've fallen a long way."
+  - choice:
+      - text: "I'm trying my best."
+        effects: { friendship: { aldric: -1 } }
+        then:
+          - aldric(neutral): "For some reason I imagined meeting a deity would be a little less… pathetic. Anyhow."
+      - text: "What's it matter to you, human?"
+        effects: { domain_points: { combat: 1 } }
+        then:
+          - aldric: "Not much. It matters to the king."
+      - text: "That's me. What's there to discuss?"
+        effects: { friendship: { aldric: 1 } }
+        then:
+          - aldric(happy): "Good. I like a straight answer."
+  - aldric: "I'm here with a proposal from the king. He wants you to take over an abandoned colony we call Withergate. It'll be yours, to do with as you please, and he's hoping some divine intervention will slow or stall the corruption that's been plaguing us of late."
+  - aldric(sad): "Just a couple of days ago it claimed the life of the queen."
+  - choice:
+      - text: "I don't see how that's my problem."
+        effects: { friendship: { aldric: -5 }, tags: [callous] }
+        then:
+          - aldric(angry): "It's of a divine nature. It'll become your problem when we humans can't stop it, and suddenly you have no heaven to return to."
+      - text: "What can I do to help?"
+        effects: { friendship: { aldric: 1 }, tags: [kind], domain_points: { friendship: 1 } }
+        then:
+          - aldric(happy): "More than we can, I'd wager. That's the idea."
+      - text: "What's in it for me?"
+        effects: { domain_points: { prosperity: 1 } }
+        then:
+          - aldric: "A town of your own, and the king's goodwill. Out here, that's not nothing."
+  - aldric: "I'll bring you there and show you around, and we can discuss the details."
+  - effects: { flags: { proposal_heard: true, cutscene_pending: the_tour }, introduce: [aldric], unlock_map: withergate }
+  - fade: out
+  - effects: { time: 2, teleport: { map: withergate, spawn: from_east_road } }
+  - end: scene

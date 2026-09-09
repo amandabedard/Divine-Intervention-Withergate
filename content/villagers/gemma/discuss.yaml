@@ -1,0 +1,21 @@
+# PLACEHOLDER topics; Amanda's replace these.
+topics:
+  - id: the_country
+    label: "Ask about the country"
+    marker: heart
+    script:
+      - gemma: "[PLACEHOLDER: Three days south, past where the road gives up. My family cuts timber there. Cut, I mean. The war took the buyers, so I came where the buyers are.]"
+      - choice:
+          - text: "Do you miss it?"
+            effects: { friendship: 3 }
+            then:
+              - gemma(sad): "[PLACEHOLDER: Every morning, for about a minute. Then there's work.]"
+          - text: "The city seems to suit you."
+            effects: { friendship: -1 }
+            then:
+              - gemma: "[PLACEHOLDER: Does it? Look again.]"
+
+  - id: the_trees
+    label: "Ask about the trees"
+    script:
+      - gemma(happy): "[PLACEHOLDER: Oak for beams, pine for everything else, and never the ones with a nest in them. That's the whole trade. The rest is arms.]"

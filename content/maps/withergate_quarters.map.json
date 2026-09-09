@@ -88,6 +88,13 @@
         "kind": "open_ui",
         "ui": "quarters"
       }
+    },
+    {
+      "type": "npc_spot",
+      "id": "desk",
+      "x": 634,
+      "y": 600,
+      "facing": "left"
     }
   ],
   "ambience": {

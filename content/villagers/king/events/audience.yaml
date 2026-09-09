@@ -1,0 +1,28 @@
+# The audience: plays the first time you enter the throne room, with Aldric at your side.
+# Amanda's beats (L2); every line is a placeholder for her script. The walk, the flags and
+# Aldric's dismissal are the contract.
+id: king_audience
+title: "The audience"
+trigger:
+  on: enter_map
+  requires: { map: aboridge_castle, not_flags: [king_audience] }
+  once: true
+  priority: 100
+stage:
+  map: aboridge_castle
+  place: { player: door, aldric: door, king: throne, jasper: candidate_left, gemma: candidate_right }
+script:
+  - narrate: "[PLACEHOLDER: The throne room of Aboridge. The king waits at the far end with two people who are trying not to look like they have been waiting long.]"
+  - move: { who: aldric, to: escort, speed: walk, wait: true }
+  - move: { who: player, to: throne_steps, speed: walk, wait: true }
+  - aldric: "[PLACEHOLDER: Your Majesty. The fallen one, as promised.]"
+  - king: "[PLACEHOLDER: So you are the deity my knight pulled out of a crater. Welcome to Aboridge, {name}. Aldric, you have my thanks. Back to the barracks with you; the wall will not watch itself.]"
+  - aldric: "[PLACEHOLDER: Majesty.]"
+  - move: { who: aldric, to: hall_door, speed: walk, wait: true }
+  - effects: { unguest: aldric }
+  - king: "[PLACEHOLDER: These two have asked to make a life in Withergate. Jasper, lately of my prison, who has since made himself useful in the mines. And Gemma, who walked in from the country with an axe and an opinion about every tree between here and there.]"
+  - jasper: "[PLACEHOLDER: Majesty. ...Hello.]"
+  - gemma(happy): "[PLACEHOLDER: Hi! Sorry. Hello.]"
+  - king: "[PLACEHOLDER: Feel free to chat with them and get to know them. Once you have made your choice, discuss recruitment with the one you want. I can spare one of them; the other stays, for now.]"
+  - effects: { flags: { king_audience: true }, introduce: [king, jasper, gemma] }
+  - end: scene

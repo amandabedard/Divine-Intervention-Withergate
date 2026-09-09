@@ -115,6 +115,16 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   if (e.corruption) state.world.corruption = Math.max(0, Math.min(10, state.world.corruption + e.corruption));
   if (e.recruit) recruit(ctx, e.recruit);
   if (e.dismiss) dismiss(ctx, e.dismiss);
+  if (e.guest) {
+    if (!state.guests.includes(e.guest)) state.guests.push(e.guest);
+    if (!state.party.includes(e.guest) && state.party.length < 2) state.party.push(e.guest);
+    ctx.requests.push({ kind: 'npc_refresh' });
+  }
+  if (e.unguest) {
+    state.guests = state.guests.filter((id) => id !== e.unguest);
+    state.party = state.party.filter((id) => id !== e.unguest);
+    ctx.requests.push({ kind: 'npc_refresh' });
+  }
   if (e.build) {
     const map = content.maps.withergate;
     const taken = new Set([...Object.keys(state.town.slots), ...state.town.buildQueue.map((b) => b.slot)]);

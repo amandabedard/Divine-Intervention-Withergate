@@ -1,12 +1,12 @@
-# Fired by the trigger zone on the landing glade: the tutorial fight.
-- narrate: "[PLACEHOLDER: A wolf steps out of the treeline. There is nothing behind its eyes.]"
+# Fired by the trigger zone on the landing glade: the tutorial fight, against a thief.
+- narrate: "[PLACEHOLDER: Someone has been watching from the treeline: a thief, knife out, who has decided that whatever fell out of the sky is worth robbing.]"
 - battle:
-    enemy: hollow_wolf
+    enemy: thief
     on_win:
-      - narrate: "[PLACEHOLDER: It falls. Something in your chest hums, briefly, like a struck bell.]"
+      - narrate: "[PLACEHOLDER: The thief runs, or lies still; either way the glade is yours again. Something in your chest hums, briefly, like a struck bell.]"
       - effects: { flags: { first_fight_won: true }, domain_points: { combat: 1 } }
-      - effects: { start_cutscene: the_messenger }
+      - effects: { start_cutscene: the_proposal }
     on_lose:
-      - narrate: "[PLACEHOLDER: It leaves you bleeding in the grass. Hooves, then, on the road.]"
+      - narrate: "[PLACEHOLDER: The thief leaves you bleeding in the grass with lighter pockets. Then, hooves on the road.]"
       - effects: { flags: { first_fight_won: true, first_fight_lost: true }, hp: 5 }
-      - effects: { start_cutscene: the_messenger }
+      - effects: { start_cutscene: the_proposal }

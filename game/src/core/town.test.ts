@@ -124,6 +124,7 @@ describe('residents', () => {
   it('escorting home costs the route days and leaves them recruitable', () => {
     const state = start();
     const ctx = mk(state);
+    state.flags.aldric_asked = true; // the opening's third choice, which makes him recruitable at all
     villagerState(state, content, 'aldric').friendship = 20;
     recruit(ctx, 'aldric');
     const day = state.time.day;

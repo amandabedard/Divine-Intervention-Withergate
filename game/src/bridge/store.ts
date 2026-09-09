@@ -24,7 +24,7 @@ export type PanelKind =
   | 'notice_board'
   | 'expedition_plan'
   | 'journal';
-export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition' | 'ending';
+export type UiMode = 'boot' | 'title' | 'intro' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition' | 'ending';
 
 export interface ExpeditionView {
   view: 'map' | 'result' | 'checkpoint' | 'menu';
@@ -85,6 +85,8 @@ export interface UiState {
   battle: BattleView | null;
   expedition: ExpeditionView | null;
   ending: EndingSummary | null;
+  /** A full-screen flash with a line of text, cleared by the session after a moment. */
+  flash: { text: string; color: 'purple' } | null;
   toasts: Toast[];
   debugOpen: boolean;
 }
@@ -111,6 +113,7 @@ function initialUi(): UiState {
     battle: null,
     expedition: null,
     ending: null,
+    flash: null,
     toasts: [],
     debugOpen: false,
   };

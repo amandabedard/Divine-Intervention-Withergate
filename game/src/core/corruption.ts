@@ -60,6 +60,7 @@ function takeSomeone(ctx: Ctx): string | null {
   ctx.state.world.clock.taken.push(id);
   const town = profile.home_town === 'none' ? 'the road' : profile.home_town.charAt(0).toUpperCase() + profile.home_town.slice(1);
   ctx.state.notices.push(fill(ctx.content.progression.corruption.taken, { name: profile.name, town }));
+  ctx.requests.push({ kind: 'flash', text: ctx.content.progression.corruption.flash, color: 'purple' });
   ctx.requests.push({ kind: 'npc_refresh' });
   return id;
 }

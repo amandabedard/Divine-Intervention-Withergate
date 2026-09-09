@@ -30,7 +30,8 @@ domain_affinity:
   pleasure: { growth: 0.85 }
 
 recruit:
-  requires: { tier: acquaintance+ }
+  # Only after you asked him in your quarters (the opening's third choice) does the topic exist.
+  requires: { flags: [aldric_asked], tier: acquaintance+ }
   method: { kind: chance, chance: 0.5, max_attempts: 3 }
   leaves_if:
     - tier: disliked-
@@ -46,12 +47,16 @@ benefits:
     - { type: passive, effect: intercept_hit, value: 1 }
     - { type: active, skill: shield_bash }
 
-# SAMPLE: Aboridge has no maps yet, so his "home" schedule keeps him around Withergate.
+# Home is Aboridge: the barracks in the upper town by day, the lower town in the evening (M4).
 schedule:
+  # After the tour he waits at your desk until you have talked; on the road he is with you (no spot).
+  overrides:
+    - when: { flags: [tour_done], not_flags: [aldric_quarters_talk] }
+      at: { map: withergate_quarters, spot: desk }
   home:
-    morning: { map: withergate, spot: square }
-    afternoon: { map: east_road, spot: milestone }
-    evening: { map: withergate, spot: well }
+    morning: { map: aboridge_upper, spot: barracks_door }
+    afternoon: { map: aboridge_upper, spot: barracks_door }
+    evening: { map: aboridge, spot: square }
     night: { map: none }
   withergate:
     morning: { map: withergate, spot: gate }

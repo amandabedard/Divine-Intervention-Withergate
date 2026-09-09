@@ -6,9 +6,9 @@ type: main
 giver: none
 summary: "[PLACEHOLDER: Four buildings and a great deal of horizon. Make it a town, and make the frontier notice.]"
 stages:
-  - id: first_resident
-    objective: "[PLACEHOLDER: Convince someone to live in Withergate.]"
-    complete_when: { residents_min: 1 }
+  - id: home
+    objective: "[PLACEHOLDER: Go home to Withergate. Your first resident should be there before you.]"
+    complete_when: { map: withergate }
   - id: first_facility
     objective: "[PLACEHOLDER: Raise a facility of your own.]"
     complete_when:

@@ -65,7 +65,7 @@ function List({ title, subtitle, items, onCancel, resetKey }: { title: string; s
 export function ExpeditionPlanPanel({ snap }: { snap: Snapshot }) {
   const s = snap.state!;
   const [regionId, setRegionId] = useState<string | null>(null);
-  const [party, setParty] = useState<string[]>([]);
+  const [party, setParty] = useState<string[]>(() => s.guests.filter((id) => !!snap.content.villagers[id]).slice(0, MAX_PARTY));
   const [confirm, setConfirm] = useState(false);
   const ctx = session.ctx();
   const dests = useMemo(() => destinations(ctx), [snap.version]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -220,7 +220,8 @@ export function ExpeditionUi({ snap, dimmed }: { snap: Snapshot; dimmed: boolean
               const isHere = c === exp.col && r === exp.row;
               const isNext = c === exp.col + 1 && next.includes(r);
               const chosen = isNext && next[pick] === r;
-              const show = known(c) || n.visited;
+              // what waits at a checkpoint is never known in advance (decided J3)
+              const show = (known(c) && !n.checkpoint) || n.visited;
               return (
                 <button
                   key={`${c}-${r}`}

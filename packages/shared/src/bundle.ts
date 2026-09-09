@@ -56,6 +56,8 @@ export interface ContentBundle {
   economy: Economy;
   tavern: TavernActivity[];
   ascension: Ascension;
+  /** Pages of the prologue shown before character creation. */
+  intro: string[];
   issues: Issue[];
   stats: ContentStats;
 }
@@ -104,6 +106,7 @@ export function emptyBundle(): ContentBundle {
     economy: DEFAULT_ECONOMY,
     tavern: [],
     ascension: DEFAULT_ASCENSION,
+    intro: [],
     issues: [],
     stats: { files: 0, villagers: 0, maps: 0, lines: 0, placeholders: 0 },
   };

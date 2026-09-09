@@ -892,3 +892,40 @@ input[type='number'] {
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
 }
+
+/* --- prologue and flashes ----------------------------------------------------------- */
+.screen.intro {
+  background: radial-gradient(ellipse at 50% 40%, rgba(30, 28, 44, 0.98), rgba(6, 6, 10, 1));
+  padding: 0 12%;
+  cursor: pointer;
+}
+.intro-text {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  line-height: 1.6;
+  max-width: 820px;
+  text-align: center;
+  animation: rise 0.6s ease-out;
+}
+.flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: Georgia, serif;
+  font-size: 30px;
+  color: #f3e9ff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+  animation: flash-fade 3.2s ease-out forwards;
+}
+.flash.purple {
+  background: radial-gradient(ellipse at 50% 50%, rgba(120, 60, 180, 0.75), rgba(40, 10, 70, 0.9));
+}
+@keyframes flash-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}

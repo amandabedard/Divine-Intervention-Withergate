@@ -8,7 +8,7 @@ import { ExpeditionUi } from './expedition';
 import { Hud, Toasts } from './hud';
 import { dispatchNav, keyToNav, startGamepadPolling } from './nav';
 import { Panel } from './panels';
-import { CreationScreen, EndingScreen, TitleScreen } from './screens';
+import { CreationScreen, EndingScreen, IntroScreen, TitleScreen } from './screens';
 
 /** Modes where menus own the input (the world scene reads the keyboard itself otherwise). */
 const menuActive = (): boolean => {
@@ -51,6 +51,7 @@ export function App() {
         if (e.key === 'Escape' && !e.repeat) session.backToTitle();
         return;
       }
+      if (u.mode === 'intro') return; // the intro screen listens on its own
 
       // Number hotkeys for the talk menu and dialog choices.
       if (!e.repeat && u.mode === 'dialog') {
@@ -101,6 +102,7 @@ export function App() {
         </div>
       )}
       {ui.mode === 'title' && <TitleScreen />}
+      {ui.mode === 'intro' && <IntroScreen pages={snap.content.intro} />}
       {ui.mode === 'creation' && <CreationScreen />}
       {state && ui.mode !== 'title' && ui.mode !== 'creation' && ui.mode !== 'battle' && ui.mode !== 'expedition' && ui.mode !== 'ending' && <Hud snap={snap} />}
       {ui.mode === 'ending' && ui.ending && <EndingScreen summary={ui.ending} />}
@@ -109,6 +111,11 @@ export function App() {
       {ui.mode === 'dialog' && ui.dialogActive && <DialogBox snap={snap} />}
       {ui.mode === 'battle' && state && <BattleUi snap={snap} />}
       {ui.mode === 'panel' && ui.panel && <Panel kind={ui.panel} arg={ui.panelArg} snap={snap} />}
+      {ui.flash && (
+        <div className={`flash ${ui.flash.color}`}>
+          <span>{ui.flash.text}</span>
+        </div>
+      )}
       <Toasts toasts={ui.toasts} />
       {ui.debugOpen && <DebugPanel snap={snap} />}
     </>

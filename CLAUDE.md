@@ -25,7 +25,7 @@
 - `game/src/scenes` Phaser (Boot, World, draw helpers) · `game/src/ui` React overlay · `game/src/bridge` store + event bus · `game/plugins/content.ts` Vite plugin compiling `content/` into `virtual:withergate-content`
 - `tools/scripts/build-sprites.mjs` packs `assets/characters/<set>_sprites/{idle,leftwalk,rightwalk}N.png` into atlases and indexes `<set>_busts/<set>_<mood>.png` → `game/public/generated/`
 - `tools/scripts/lib/sheet.mjs` cuts prop/tile sheets into pieces (pure, pngjs; tested via `import-sheet.test.ts`); `assets/manifest.json` lists every library asset (`pack`, `pixel`, `source` for imported pieces); the game loads only the assets its maps use (`game/src/scenes/assets.ts`)
-- `content/` sample content around the character `aldric` and three maps (`withergate`, `withergate_quarters`, `east_road`)
+- `content/` the opening's content around `aldric`, the king and the candidates `jasper`/`gemma`, and the maps `withergate`, `withergate_quarters`, `east_road`, `landing_glade`, `aboridge`, `aboridge_upper`, `aboridge_castle`
 
 ## Conventions
 - Strict TypeScript. Relative imports inside `packages/shared` use explicit `.ts` extensions (Node loads them natively for the Vite config).

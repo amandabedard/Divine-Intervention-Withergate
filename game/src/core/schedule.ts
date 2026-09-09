@@ -17,6 +17,8 @@ export function whereIs(ctx: Ctx, id: string): Placement | null {
   if (!bundle) return null;
   const v = villagerState(ctx.state, ctx.content, id);
   if (v.gone) return null;
+  // travelling with you: not standing anywhere (decided J2)
+  if (ctx.state.party.includes(id)) return null;
   const profile = bundle.profile;
   const phase = ctx.state.time.phase;
 
