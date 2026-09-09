@@ -1,0 +1,10 @@
+# PLACEHOLDER chat; Amanda's lines replace these.
+pools:
+  - when: { tier: stranger }
+    lines:
+      - "[PLACEHOLDER: Jasper keeps his hands where you can see them. Habit, he says.]"
+      - "[PLACEHOLDER: The mines are dark and the pay is honest. That's more than I can say for most places I've slept.]"
+  - when: { tier: acquaintance+ }
+    lines:
+      - "[PLACEHOLDER: A town with no walls yet. I could get used to that.]"
+      - "[PLACEHOLDER: If Withergate has a hill, it has a mine. It just doesn't know it yet.]"

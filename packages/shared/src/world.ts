@@ -337,6 +337,40 @@ export const TavernFileSchema = z.strictObject({ activities: z.array(TavernActiv
 
 // Progression --------------------------------------------------------------
 
+export const DEFAULT_CORRUPTION_RULES = {
+  warning_days: 5,
+  grace_days: 3,
+  rise_every_days: 10,
+  incursion_from: 6,
+  warning: 'You can feel the corruption leaking into the mortal plane. Better do something about it before something terrible happens.',
+  taken: 'It appears we lost {name} in {town} to the corruption last night…',
+  spread: 'The air over the frontier hangs heavier than yesterday.',
+  cleared: 'The frontier breathes easier. The corruption has been pushed back, for now.',
+  incursion_repelled: 'Corrupted things came at the walls in the night. The militia turned them back.',
+  incursion_hit: 'Corrupted things came at the walls in the night and got into the stores: {lost}.',
+  flash: 'The corruption has reached Duluma…',
+};
+
+export const CorruptionRulesSchema = z.strictObject({
+  /** Days without fighting the corruption before the warning. */
+  warning_days: z.number().int().positive().default(DEFAULT_CORRUPTION_RULES.warning_days),
+  /** Days after the warning to start a corruption expedition before someone is taken. */
+  grace_days: z.number().int().positive().default(DEFAULT_CORRUPTION_RULES.grace_days),
+  /** Every this many idle days the corruption rises by one (0 = only by story). */
+  rise_every_days: z.number().int().nonnegative().default(DEFAULT_CORRUPTION_RULES.rise_every_days),
+  /** Corruption level from which incursions on Withergate become possible. */
+  incursion_from: z.number().int().min(1).max(10).default(DEFAULT_CORRUPTION_RULES.incursion_from),
+  warning: z.string().default(DEFAULT_CORRUPTION_RULES.warning),
+  taken: z.string().default(DEFAULT_CORRUPTION_RULES.taken),
+  spread: z.string().default(DEFAULT_CORRUPTION_RULES.spread),
+  cleared: z.string().default(DEFAULT_CORRUPTION_RULES.cleared),
+  incursion_repelled: z.string().default(DEFAULT_CORRUPTION_RULES.incursion_repelled),
+  incursion_hit: z.string().default(DEFAULT_CORRUPTION_RULES.incursion_hit),
+  /** Flashed across the screen the morning someone is taken. */
+  flash: z.string().default(DEFAULT_CORRUPTION_RULES.flash),
+});
+export type CorruptionRules = z.output<typeof CorruptionRulesSchema>;
+
 const StatBlock = z.strictObject({
   hp: z.number(),
   attack: z.number(),
@@ -377,7 +411,33 @@ export const ProgressionSchema = z.strictObject({
       loss_fraction: z.tuple([z.number(), z.number()]).default([0.25, 0.5]),
     })
     .default({ loss_chance_end: 0.3, loss_chance_checkpoint: 0.5, loss_fraction: [0.25, 0.5] }),
+  /** The corruption's cadence (decided G3, H1, F4) and incursions. Texts use {name} and {town}. */
+  corruption: CorruptionRulesSchema.default(DEFAULT_CORRUPTION_RULES),
 });
 export type Progression = z.output<typeof ProgressionSchema>;
+
+// Intro (content/intro.yaml) ---------------------------------------------------------
+
+/** Pages of text shown before character creation. {name} is not available yet. */
+export const IntroSchema = z.strictObject({ pages: z.array(z.string().min(1)).min(1) });
+
+// Ascension (content/ascension.yaml) --------------------------------------------
+
+export const AscensionSchema = z.strictObject({
+  /** What must be true before the shrine offers ascension. */
+  requires: ConditionSchema.optional(),
+  /** Shown at the shrine while `requires` does not hold. */
+  not_yet: z.string().default('[PLACEHOLDER: The heavens are not ready for you yet.]'),
+  /** Per axis: the epithet that follows your name and the thing you are deity of. */
+  titles: z
+    .partialRecord(z.enum(DOMAINS), z.strictObject({ epithet: z.string().min(1), domain: z.string().min(1) }))
+    .default({}),
+  /** Plays before the ending screen; {title} is substituted. */
+  epilogue: RawScriptSchema.optional(),
+});
+export type RawAscension = z.output<typeof AscensionSchema>;
+export interface Ascension extends Omit<RawAscension, 'epilogue'> {
+  epilogue?: Script;
+}
 
 export type { Condition };

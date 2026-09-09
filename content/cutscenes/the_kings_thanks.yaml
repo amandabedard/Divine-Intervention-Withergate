@@ -1,0 +1,13 @@
+# After you recruit one of the candidates: act 0's "choose" stage completes and starts this scene
+# as soon as the conversation closes. Amanda's beats (L2): a loose explanation of how dialog works,
+# thanks for your service, hopes for the two settlements. Placeholder lines.
+id: the_kings_thanks
+stage:
+  map: aboridge_castle
+script:
+  - face: { who: player, toward: king }
+  - king: "[PLACEHOLDER: A choice made. Good. A word before you go, since nobody will have told you how things work down here.]"
+  - king: "[PLACEHOLDER: People open up slowly. Chat with them and they warm to you; ask them about themselves and they tell you more the closer you get; bring the right gift and they remember it. Some will only follow you once they trust you. Some never will.]"
+  - king: "[PLACEHOLDER: Thank you for your service. I hope this is the start of a prosperous relationship between our settlements. Withergate is yours, and the road west is open.]"
+  - effects: { flags: { king_thanks: true } }
+  - end: scene

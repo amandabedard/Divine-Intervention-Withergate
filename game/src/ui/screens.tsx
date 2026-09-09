@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LABELS, STATS } from '@withergate/shared';
 import type { Form, Label, Stat } from '@withergate/shared';
 import { useStore } from '../bridge/store';
+import { DOMAINS, DOMAIN_LABELS } from '@withergate/shared';
+import type { EndingSummary } from '../core/ending';
 import { session } from '../core/session';
 import { useMenuNav } from './nav';
 
@@ -138,6 +140,73 @@ export function CreationScreen() {
         </div>
         <p className="hint small">Tab moves between fields; Enter in the name field begins once every point is spent.</p>
       </div>
+    </div>
+  );
+}
+
+/** The only place the five axes are ever shown: after ascension. */
+export function EndingScreen({ summary }: { summary: EndingSummary }) {
+  const items = useMemo(() => [{ label: 'Return to the title', run: () => session.finishGame() }], []);
+  const nav = useMenuNav({ items, onSelect: (it) => it.run() });
+  const max = Math.max(1, ...DOMAINS.map((d) => summary.points[d]));
+  return (
+    <div className="screen center title ending">
+      <h2>The return to the heavens</h2>
+      <h1>{summary.title}</h1>
+      <p className="muted">
+        Day {summary.day} · {summary.residents} resident{summary.residents === 1 ? '' : 's'} in Withergate · faith level {summary.faithLevel} · {summary.questsDone} quest{summary.questsDone === 1 ? '' : 's'} done · corruption {summary.corruption}
+      </p>
+      <div className="axes">
+        {DOMAINS.map((d) => (
+          <div key={d} className={`axis ${d === summary.primary ? 'primary' : ''} ${d === summary.secondary ? 'secondary' : ''}`}>
+            <span className="name">{DOMAIN_LABELS[d]}</span>
+            <span className="bar">
+              <span className="fill" style={{ width: `${(summary.points[d] / max) * 100}%` }} />
+            </span>
+            <span className="num">{summary.points[d]}</span>
+          </div>
+        ))}
+      </div>
+      <div className="menu">
+        {items.map((it, i) => {
+          const p = nav.itemProps(i);
+          return (
+            <button key={it.label} className={p.className} onMouseEnter={p.onMouseEnter} onClick={it.run}>
+              {it.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** The prologue: pages of text before character creation. Enter or click turns the page, Esc skips. */
+export function IntroScreen({ pages }: { pages: string[] }) {
+  const [page, setPage] = useState(0);
+  const last = page >= pages.length - 1;
+  const next = () => (last ? session.introDone() : setPage((p) => p + 1));
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.key === 'Escape') session.introDone();
+      else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        next();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pages.length]);
+  return (
+    <div className="screen center intro" onClick={next}>
+      <p key={page} className="intro-text">
+        {pages[page]}
+      </p>
+      <p className="hint">
+        {last ? 'Enter to begin' : 'Enter to continue'} · Esc to skip · {page + 1} / {pages.length}
+      </p>
     </div>
   );
 }

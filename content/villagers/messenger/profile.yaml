@@ -5,6 +5,7 @@ pronouns: he/him
 profession: none
 home_town: aboridge
 romanceable: false
+protected: true
 bio: "[PLACEHOLDER: A rider in Aboridge livery who drew the short straw.]"
 likes: []
 dislikes: []

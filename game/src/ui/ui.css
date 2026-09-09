@@ -704,3 +704,228 @@ input[type='number'] {
 .status-bad {
   color: var(--danger);
 }
+
+/* --- expeditions --------------------------------------------------------------- */
+.expedition {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(40, 44, 60, 0.96), rgba(12, 12, 18, 0.98));
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+}
+.expedition.dimmed {
+  pointer-events: none;
+  opacity: 0.35;
+}
+.exp-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: baseline;
+  padding: 14px 24px 8px;
+  font-size: 15px;
+  border-bottom: 1px solid var(--line);
+}
+.exp-scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 24px 0;
+}
+.exp-map {
+  position: relative;
+  margin: 0 auto;
+}
+.exp-edges {
+  position: absolute;
+  inset: 0;
+}
+.exp-edges line {
+  stroke: rgba(233, 226, 211, 0.18);
+  stroke-width: 2;
+}
+.exp-edges line.walked {
+  stroke: var(--gold);
+  stroke-width: 3;
+}
+.exp-edges line.ahead {
+  stroke: rgba(233, 226, 211, 0.6);
+  stroke-dasharray: 6 5;
+}
+.exp-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 92px;
+  height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  cursor: default;
+  padding: 0;
+}
+.exp-node .icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.exp-node .label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.exp-node.start {
+  border-style: dashed;
+}
+.exp-node.checkpoint {
+  border-color: rgba(217, 182, 106, 0.6);
+  width: 104px;
+  height: 72px;
+}
+.exp-node.visited {
+  border-color: var(--gold);
+  background: rgba(217, 182, 106, 0.12);
+}
+.exp-node.here {
+  box-shadow: 0 0 0 3px var(--gold), 0 0 24px rgba(217, 182, 106, 0.5);
+}
+.exp-node.next {
+  border-color: rgba(233, 226, 211, 0.7);
+  cursor: pointer;
+}
+.exp-node.next:hover,
+.exp-node.chosen {
+  border-color: #fff;
+  background: rgba(233, 226, 211, 0.14);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+.exp-node.unknown {
+  opacity: 0.55;
+}
+.exp-node:disabled {
+  opacity: 0.85;
+}
+.exp-node.next:disabled {
+  opacity: 1;
+}
+.exp-hint {
+  margin: 0 24px 14px;
+}
+.exp-box {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  width: 620px;
+  max-width: calc(100% - 48px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.exp-box h3 {
+  margin: 0 0 6px;
+  font-family: Georgia, serif;
+  font-weight: normal;
+  color: var(--gold);
+}
+.exp-box p {
+  margin: 4px 0 10px;
+}
+
+/* --- the ending ------------------------------------------------------------------ */
+.screen.ending {
+  background: radial-gradient(ellipse at 50% 20%, rgba(80, 70, 40, 0.9), rgba(8, 8, 12, 0.98));
+}
+.screen.ending h1 {
+  font-size: 34px;
+  max-width: 900px;
+  text-align: center;
+  line-height: 1.3;
+}
+.axes {
+  width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0 26px;
+}
+.axis {
+  display: grid;
+  grid-template-columns: 110px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.axis.primary {
+  color: var(--gold);
+}
+.axis.secondary {
+  color: var(--ink);
+}
+.axis .bar {
+  display: block;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.axis .fill {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  border-radius: 999px;
+}
+.axis .num {
+  text-align: right;
+}
+.journal .kv {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* --- prologue and flashes ----------------------------------------------------------- */
+.screen.intro {
+  background: radial-gradient(ellipse at 50% 40%, rgba(30, 28, 44, 0.98), rgba(6, 6, 10, 1));
+  padding: 0 12%;
+  cursor: pointer;
+}
+.intro-text {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  line-height: 1.6;
+  max-width: 820px;
+  text-align: center;
+  animation: rise 0.6s ease-out;
+}
+.flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: Georgia, serif;
+  font-size: 30px;
+  color: #f3e9ff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+  animation: flash-fade 3.2s ease-out forwards;
+}
+.flash.purple {
+  background: radial-gradient(ellipse at 50% 50%, rgba(120, 60, 180, 0.75), rgba(40, 10, 70, 0.9));
+}
+@keyframes flash-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}

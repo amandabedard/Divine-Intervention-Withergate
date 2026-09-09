@@ -1,0 +1,29 @@
+# After the tour: talk to Aldric in your quarters. Recruiting, and the only way to make him recruitable.
+# Amanda's dialogue, lightly polished.
+id: aldric_quarters_talk
+title: "Details"
+trigger:
+  on: talk
+  requires: { map: withergate_quarters, flags: [tour_done], not_flags: [aldric_quarters_talk] }
+  once: true
+  priority: 50
+script:
+  - aldric: "[PLACEHOLDER: So. Withergate is yours. Nobody lives in it yet, which brings us to the details.]"
+  - aldric: "The king's offer stands for anyone who'll come. You'll need people who can work the place. Did you have a profession in mind?"
+  - choice:
+      - text: "A farmer, for sure."
+        effects: { flags: { wish_farmer: true }, domain_points: { prosperity: 1 } }
+        then:
+          - aldric: "[PLACEHOLDER: Sensible. Nobody stays where there's nothing to eat.]"
+      - text: "A doctor would be nice."
+        effects: { flags: { wish_doctor: true }, domain_points: { friendship: 1 } }
+        then:
+          - aldric: "[PLACEHOLDER: Out here? You'll need one. I'll ask around.]"
+      - text: "I was hoping you'd be interested in joining me."
+        effects: { friendship: 5, flags: { aldric_asked: true } }
+        then:
+          - aldric(neutral): "I hadn't thought much about it until now. My duty has always been to the king. I'll give it some consideration."
+  - aldric: "I'll accompany you back to Aboridge and introduce you to the king. We've a couple of candidates ready who are already interested in moving here, for you to choose from, and you might even persuade a few residents to join your cause."
+  - effects: { flags: { aldric_quarters_talk: true }, guest: aldric }
+  - narrate: "[PLACEHOLDER: Aldric will travel with you. Plan the road to Aboridge from your desk, or from the signpost at the end of the east road.]"
+  - end: close

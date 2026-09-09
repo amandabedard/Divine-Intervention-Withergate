@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { EMPTY_INDEX, EMPTY_MANIFEST, emptyBundle } from '@withergate/shared';
 import type { AssetManifest, ContentBundle, GeneratedIndex } from '@withergate/shared';
 import type { BattleEvent } from '../core/combat/battle';
+import type { EndingSummary } from '../core/ending';
 import { Rng } from '../core/rng';
 import type { GameState } from '../core/state';
 import { bus } from './bus';
@@ -20,8 +21,16 @@ export type PanelKind =
   | 'shrine'
   | 'facility'
   | 'craft'
-  | 'notice_board';
-export type UiMode = 'boot' | 'title' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle';
+  | 'notice_board'
+  | 'expedition_plan'
+  | 'journal';
+export type UiMode = 'boot' | 'title' | 'intro' | 'creation' | 'world' | 'dialog' | 'panel' | 'battle' | 'expedition' | 'ending';
+
+export interface ExpeditionView {
+  view: 'map' | 'result' | 'checkpoint' | 'menu';
+  title?: string;
+  lines?: string[];
+}
 export type TalkView = 'menu' | 'topics' | 'gifts';
 
 export interface BattleView {
@@ -74,6 +83,10 @@ export interface UiState {
   roll: DialogRoll | null;
   dialogActive: boolean;
   battle: BattleView | null;
+  expedition: ExpeditionView | null;
+  ending: EndingSummary | null;
+  /** A full-screen flash with a line of text, cleared by the session after a moment. */
+  flash: { text: string; color: 'purple' } | null;
   toasts: Toast[];
   debugOpen: boolean;
 }
@@ -98,6 +111,9 @@ function initialUi(): UiState {
     roll: null,
     dialogActive: false,
     battle: null,
+    expedition: null,
+    ending: null,
+    flash: null,
     toasts: [],
     debugOpen: false,
   };

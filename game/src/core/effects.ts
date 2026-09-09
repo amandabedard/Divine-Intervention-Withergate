@@ -2,6 +2,7 @@ import { DOMAIN_MILESTONE_TAGS, PHASES, levelForXp } from '@withergate/shared';
 import type { Domain, Effects, Phase } from '@withergate/shared';
 import { relationKey } from './conditions';
 import type { Ctx } from './ctx';
+import { addResources } from './expedition';
 import { advanceQuest, completeQuest, failQuest, startQuest } from './quests';
 import { changeFriendship, changeRomance, introduce, setRomanceState } from './relationships';
 import { faithLevel, maxEnergy, maxGrace, maxHp, phaseAbs, residents, villagerState } from './state';
@@ -99,12 +100,7 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   if (e.quest_complete) completeQuest(ctx, e.quest_complete);
   if (e.quest_fail) failQuest(ctx, e.quest_fail);
 
-  if (e.resources) {
-    for (const [r, n] of Object.entries(e.resources)) {
-      const key = r as keyof typeof state.town.resources;
-      state.town.resources[key] = Math.max(0, (state.town.resources[key] ?? 0) + (n ?? 0));
-    }
-  }
+  if (e.resources) addResources(ctx, e.resources);
   if (e.items) {
     for (const [id, n] of Object.entries(e.items)) {
       const next = (state.town.storage[id] ?? 0) + n;
@@ -119,6 +115,16 @@ export function applyEffects(e: Effects | undefined, ctx: Ctx): void {
   if (e.corruption) state.world.corruption = Math.max(0, Math.min(10, state.world.corruption + e.corruption));
   if (e.recruit) recruit(ctx, e.recruit);
   if (e.dismiss) dismiss(ctx, e.dismiss);
+  if (e.guest) {
+    if (!state.guests.includes(e.guest)) state.guests.push(e.guest);
+    if (!state.party.includes(e.guest) && state.party.length < 2) state.party.push(e.guest);
+    ctx.requests.push({ kind: 'npc_refresh' });
+  }
+  if (e.unguest) {
+    state.guests = state.guests.filter((id) => id !== e.unguest);
+    state.party = state.party.filter((id) => id !== e.unguest);
+    ctx.requests.push({ kind: 'npc_refresh' });
+  }
   if (e.build) {
     const map = content.maps.withergate;
     const taken = new Set([...Object.keys(state.town.slots), ...state.town.buildQueue.map((b) => b.slot)]);

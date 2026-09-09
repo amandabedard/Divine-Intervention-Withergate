@@ -1,3 +1,4 @@
+import { newClock } from './corruption';
 import type { GameState } from './state';
 import { SAVE_VERSION } from './state';
 
@@ -58,10 +59,17 @@ export function deleteSlot(slot: number): void {
 function migrate(state: GameState): GameState {
   // Future save-format migrations go here, keyed on state.version.
   state.party ??= [];
+  state.guests ??= [];
   state.battle = null;
   state.notices ??= [];
   state.player.weapons ??= state.player.weaponId ? [state.player.weaponId] : [];
   state.town.slots ??= {};
+  state.expedition ??= null;
+  state.caravans ??= [];
+  state.world.encountersSeen ??= [];
+  state.world.clock ??= newClock(state.time.day);
+  state.world.clock.lastRise ??= state.world.clock.lastCleared;
+  state.ended ??= null;
   for (const b of state.town.buildQueue) b.slot ??= '';
   state.version = SAVE_VERSION;
   return state;

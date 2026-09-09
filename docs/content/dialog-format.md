@@ -288,7 +288,7 @@ script:
 | Step | Form |
 |---|---|
 | place | `- place: { who: mara, at: spot_id }` |
-| move | `- move: { who: mara, to: spot_id, speed: walk, wait: true }` |
+| move | `- move: { who: mara, to: spot_id, speed: walk, wait: true }` — with `wait: true` the script waits for the walk (Enter cannot skip it) |
 | face | `- face: { who: mara, dir: left }` or `{ who: mara, toward: player }` |
 | emote | `- emote: { who: mara, icon: "!" }` icons: `!`, `?`, `heart`, `anger`, `sweat`, `note`, `zzz` |
 | anim | `- anim: { who: mara, play: sit }` |
@@ -298,6 +298,8 @@ script:
 | sfx / music | `- sfx: door_open` · `- music: { play: mara_theme, fade: 2 }` · `- music: stop` |
 
 Every character in a scene must have been placed (or be on the map already). Spot ids come from the map file; the validator checks them.
+
+To continue a scene on another map, set `flags: { cutscene_pending: <cutscene id> }` before the `teleport` effect: the named cutscene plays as soon as the new map is built (the opening's `the_proposal` → `the_tour` does this).
 
 ---
 

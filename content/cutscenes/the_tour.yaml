@@ -1,0 +1,21 @@
+# Aldric's tour of Withergate. Runs on arrival (queued by the_proposal via cutscene_pending).
+# Every line is a placeholder for Amanda's script; the walk and the flags are the contract.
+id: the_tour
+stage:
+  map: withergate
+  place: { player: gate, aldric: gate }
+script:
+  - fade: in
+  - aldric: "[PLACEHOLDER: Withergate. Four buildings and a great deal of horizon. Walk with me.]"
+  - move: { who: aldric, to: lumber_pile, speed: walk, wait: true }
+  - move: { who: player, to: lumber_pile, speed: walk, wait: true }
+  - aldric: "[PLACEHOLDER: The empty ground east of here is where you'll build. Barracks, a farm, whatever the town needs. The king will send materials for the first of them.]"
+  - move: { who: aldric, to: well, speed: walk, wait: true }
+  - move: { who: player, to: well, speed: walk, wait: true }
+  - aldric: "[PLACEHOLDER: The tavern and the general store, both still standing, both still empty. The well works. That's more than most places out here can say.]"
+  - move: { who: aldric, to: square, speed: walk, wait: true }
+  - move: { who: player, to: square, speed: walk, wait: true }
+  - aldric: "[PLACEHOLDER: Living quarters for whoever you talk into staying, and your own quarters by the shrine at the west end. The shrine's for you, I'm told. I wouldn't know what to do with one.]"
+  - aldric: "Look around at your leisure. I'll be waiting for you in your new quarters."
+  - effects: { flags: { tour_done: true } }
+  - end: scene

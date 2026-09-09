@@ -43,6 +43,8 @@ export const InteractActionSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('sign'), text: z.string().min(1) }),
   z.strictObject({ kind: z.literal('forage'), resource: z.enum(['wood', 'stone', 'ore', 'food', 'herbs', 'cloth']), amount: z.tuple([z.number().int(), z.number().int()]), once_per_day: z.boolean().default(true) }),
   z.strictObject({ kind: z.literal('facility'), facility: z.string().min(1) }),
+  /** Plan an expedition from here (a road's end, a town gate, the desk). */
+  z.strictObject({ kind: z.literal('expedition') }),
 ]);
 export type InteractAction = z.output<typeof InteractActionSchema>;
 

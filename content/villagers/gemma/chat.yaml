@@ -1,0 +1,10 @@
+# PLACEHOLDER chat; Amanda's lines replace these.
+pools:
+  - when: { tier: stranger }
+    lines:
+      - "[PLACEHOLDER: City trees are sad trees. Too many people leaning on them.]"
+      - "[PLACEHOLDER: You should see the forest where I'm from. Actually, you shouldn't. It's mine.]"
+  - when: { tier: acquaintance+ }
+    lines:
+      - "[PLACEHOLDER: A whole horizon and nobody's cut a thing. I'm going to need a bigger axe.]"
+      - "[PLACEHOLDER: Rain's coming. Trees like it. So do I.]"

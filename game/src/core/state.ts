@@ -9,6 +9,9 @@ import {
   mapEntities,
 } from '@withergate/shared';
 import type { BattleState } from './combat/battle';
+import type { CorruptionClock } from './corruption';
+import { newClock } from './corruption';
+import type { Caravan, ExpeditionState } from './expedition';
 import type {
   ContentBundle,
   Domain,
@@ -106,10 +109,18 @@ export interface GameState {
   quests: Record<string, QuestState>;
   flags: Record<string, FlagValue>;
   choicesMade: string[];
-  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[] };
+  world: { corruption: number; relations: Record<string, Relation>; unlockedMaps: string[]; encountersSeen: string[]; clock: CorruptionClock };
+  /** Set once you have ascended; the save is finished. */
+  ended: { day: number; title: string } | null;
+  /** The node map being walked, or null at home / in a town. */
+  expedition: ExpeditionState | null;
+  /** Hauls on their way to Withergate. */
+  caravans: Caravan[];
   scheduleOverrides: Record<string, { map: string; spot: string; untilPhase: number }>;
-  /** Companions travelling with you (up to 2). Chosen properly in Phase 7; the debug panel sets it until then. */
+  /** Companions travelling with you (up to 2), chosen in the expedition planner. */
   party: string[];
+  /** Characters who travel with you without living in Withergate (story guests such as Aldric on the first road). */
+  guests: string[];
   /** The fight in progress, or null. Never persisted across a save. */
   battle: BattleState | null;
   /** Messages that arrived overnight (messenger warnings, completed buildings), shown after sleeping. */
@@ -183,9 +194,13 @@ export function newGame(content: ContentBundle, opts: NewGameOptions): GameState
     quests: {},
     flags: {},
     choicesMade: [],
-    world: { corruption: 1, relations: {}, unlockedMaps: [] },
+    world: { corruption: 1, relations: {}, unlockedMaps: [], encountersSeen: [], clock: newClock(1) },
+    ended: null,
+    expedition: null,
+    caravans: [],
     scheduleOverrides: {},
     party: [],
+    guests: [],
     battle: null,
     notices: [],
     log: [],

@@ -223,6 +223,48 @@ Effects the game applies today: `resource_income` (resource, amount per day), `s
 
 ---
 
+## The prologue
+
+`content/intro.yaml` holds the pages shown before character creation (Enter turns the page, Esc skips). No variables are available yet, since there is no character.
+
+```yaml
+pages:
+  - "In the beginning there was nothing…"
+  - "You were thought to be full-blooded…"
+```
+
+---
+
+## Ascension
+
+`content/ascension.yaml` decides when the shrine lets you ascend and how the ending names you.
+
+```yaml
+requires: { all: [{ quest: { id: main_act3, status: done } }, { faith_level_min: 5 }, { residents_min: 5 }] }
+not_yet: "The heavens are not listening yet."          # shown at the shrine while requires fails
+titles:                                                 # per axis: epithet after your name, and what you are deity of
+  friendship: { epithet: "the Beloved", domain: "Hearth and Kin" }
+  combat: { epithet: "the Unyielding", domain: "the Sword and the Wall" }
+epilogue:                                               # plays before the ending screen; {title} is filled in
+  - narrate: "They will remember you as {title}."
+```
+
+The strongest axis gives the epithet; it and the runner-up (if at least half as strong) give the domains: "Mara the Unyielding, Goddess of the Sword and the Wall and Roads and Hidden Things". The five axes are shown to the player only on the ending screen.
+
+`content/progression.yaml → corruption` tunes the corruption's cadence and its words (`{name}`, `{town}`, `{lost}` are filled in):
+
+```yaml
+corruption:
+  warning_days: 5        # idle days before the warning
+  grace_days: 3          # days after it to start a corruption expedition before someone is taken
+  rise_every_days: 10    # idle days per +1 corruption (0 = story only)
+  incursion_from: 6      # corruption level from which incursions can happen
+  warning: "You can feel the corruption leaking into the mortal plane…"
+  taken: "It appears we lost {name} in {town} to the corruption last night…"
+```
+
+---
+
 ## Economy and the tavern
 
 `content/economy.yaml`
@@ -294,6 +336,8 @@ regions:
 
 Biome defaults live in `content/biomes.yaml` (node weights per type and per phase, enemy pools, gather tables). The generator multiplies: biome default × region override × phase modifier × corruption modifier × party and facility benefits × power effects.
 
+How a region is walked (built in Phase 7): a route has `days` segments, an exploration rolls its `segments`; every segment is three columns of 2–4 nodes and then one checkpoint drawn from `checkpoints[segment]` (`pool` picks at random among those whose `where` fits, `fixed` always plays). The last checkpoint of a route is the gates of `to`: after it plays, the town's map loads at its `from_road` spawn (or the visit is abstract and you turn back if the town has no map yet). A route that ends in a town also offers the way back from that town. Enemies for battle nodes come from the biome's `enemies`, filtered by each enemy's `appears`; elite nodes prefer `tier: elite` enemies and otherwise toughen a regular one.
+
 ---
 
 ## Encounter events
@@ -327,13 +371,13 @@ script:
           - narrate: "Green shoots curl through the mud where the tears fell."
 ```
 
-Party members can speak in encounters with `- party: mara` lines; the line is skipped if she is not present, or use `requires: { party_has: mara }` on a choice.
+Party members can speak in encounters with `- party: mara` lines; the line is skipped if she is not present, or use `requires: { party_has: mara }` on a choice. `node` decides where an encounter can appear: `event` nodes draw from the event pool, `shrine`, `traveler` and `rest` nodes draw from theirs (with a built-in fallback when nothing fits), and `checkpoint` encounters are only reached through a region's `checkpoints` pools. `once: true` plays a single time per game. While on the road, `resources` effects go into the haul and `in_expedition`, `biome` and `node` conditions describe where you are.
 
 ---
 
 ## Cutscenes
 
-`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter: { start_cutscene: id }`), an effect, or the story engine (the opening).
+`content/cutscenes/<id>.yaml` — `stage:` + `script:` exactly as in heart events, without a trigger. Started by a quest stage (`on_enter` or `on_complete: { start_cutscene: id }`; the scene waits until the current conversation closes), an effect, or the story engine (the opening).
 
 ```yaml
 id: the_messenger

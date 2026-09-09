@@ -290,7 +290,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setIdle(actor: Actor): void {
-    if (!(actor.obj instanceof Phaser.GameObjects.Sprite)) return;
+    if (!(actor.obj instanceof Phaser.GameObjects.Sprite) || !actor.obj.active) return;
     const idle = this.anim(actor, 'idle');
     if (idle && actor.id !== 'player') {
       actor.obj.play(idle, true);
@@ -303,7 +303,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setWalking(actor: Actor): void {
-    if (!(actor.obj instanceof Phaser.GameObjects.Sprite)) return;
+    if (!(actor.obj instanceof Phaser.GameObjects.Sprite) || !actor.obj.active) return;
     const key = this.anim(actor, actor.facing === 'left' ? 'leftwalk' : 'rightwalk');
     if (key) actor.obj.play(key, true);
   }
@@ -364,7 +364,17 @@ export class WorldScene extends Phaser.Scene {
     return mapEntities(this.map, 'npc_spot').find((s) => s.id === id)?.x;
   }
 
+  /** An exception inside a stage direction would escape into Phaser's step and stop the game loop. */
   private performStage(step: StageStep, done: () => void): void {
+    try {
+      this.stageDirection(step, done);
+    } catch (e) {
+      console.error('stage direction failed', step, e);
+      done();
+    }
+  }
+
+  private stageDirection(step: StageStep, done: () => void): void {
     const a = step.args;
     switch (step.op) {
       case 'place': {
@@ -402,8 +412,13 @@ export class WorldScene extends Phaser.Scene {
           x,
           duration,
           onComplete: () => {
-            finish();
-            if (a.wait !== false) done();
+            // Runs from Phaser's tween step: an exception here would stop the game loop.
+            try {
+              finish();
+              if (a.wait !== false) done();
+            } catch (e) {
+              console.error('after a move', e);
+            }
           },
         });
         if (a.wait === false) done();
